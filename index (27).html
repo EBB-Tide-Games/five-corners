@@ -1,0 +1,2886 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Five Corners" />
+<meta name="description" content="Direct traffic at Five Corners, Vineyard Haven. A one-thumb browser game." />
+<meta name="theme-color" content="#0c1820" />
+<!-- Link preview. Without these, Messages has nothing to show but the bare URL. -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Five Corners" />
+<meta property="og:title" content="Five Corners — Vineyard Haven" />
+<meta property="og:description" content="You are the crossing guard at Five Corners. Keep the island moving before Vineyard tempers boil over. A one-thumb browser game." />
+<meta property="og:url" content="https://ebb-tide-games.github.io/five-corners/" />
+<meta property="og:image" content="https://ebb-tide-games.github.io/five-corners/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="An overhead view of the five-way intersection at Vineyard Haven, with traffic queued on every approach." />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Five Corners — Vineyard Haven" />
+<meta name="twitter:description" content="You are the crossing guard. Keep the island moving." />
+<meta name="twitter:image" content="https://ebb-tide-games.github.io/five-corners/og-image.png" />
+<link rel="apple-touch-icon" href="https://ebb-tide-games.github.io/five-corners/apple-touch-icon.png" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230c1820'/%3E%3Cg stroke='%23767b7e' stroke-width='7' stroke-linecap='round'%3E%3Cpath d='M32 32 L32 4'/%3E%3Cpath d='M32 32 L4 28'/%3E%3Cpath d='M32 32 L60 30'/%3E%3Cpath d='M32 32 L56 58'/%3E%3Cpath d='M32 32 L26 60'/%3E%3C/g%3E%3Ccircle cx='32' cy='32' r='6' fill='%23e8c86a'/%3E%3C/svg%3E" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>Five Corners — Vineyard Haven</title>
+<style>
+  :root{
+    /* Palette sampled from the illustrated mockup: warm parchment ground,
+       sage planting, slate paving, harbour blue, and a soft ink line. */
+    --ground:#ded3b6;      /* parchment / packed sand */
+    --grass:#93a06d;       /* sage lawn */
+    --road:#767b7e;        /* slate paving */
+    --edge:#e6dcc2;        /* cream kerb and sidewalk */
+    --water:#3d6b96;       /* harbour */
+    --water-lt:#5b87a8;
+    --ink:#2f2b23;         /* warm ink outline */
+    --roof:#5d6167;        /* slate shingle */
+    --wall:#f2ece0;        /* clapboard */
+    --wall2:#e0d3b4;
+    --plaque:#141310;      /* HUD plaque */
+    --plaque-br:#3b352a;
+    --cream:#f3e9d2;       /* plaque text */
+    --gold:#e8c86a;        /* score */
+    --accent:#e7a23b; --red:#c9503f; --green:#6f9e5f;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:#0c1820;-webkit-text-size-adjust:100%;text-size-adjust:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:white;overflow:hidden;touch-action:manipulation}
+  body{display:flex;justify-content:center;align-items:stretch}
+  #app{width:min(100vw,520px);height:100vh;height:100svh;position:relative;display:flex;flex-direction:column;background:#0c1820;overflow:hidden;box-shadow:0 0 28px #0008}
+  /* The mockup floats dark plaques over the map rather than using solid bars,
+     so the header and footer are transparent and their contents are plaques. */
+  /* Was in the flex flow, so its height came straight off the top of the map.
+     It now floats over the map like the mockup's plaques, and the map keeps the
+     full height of #app. Row 1 is the title strip across the top; row 2 carries
+     the temper meter on the left and the score on the right. */
+  header{position:absolute;left:0;right:0;top:0;
+         padding:calc(env(safe-area-inset-top) + 6px) 8px 0;
+         background:transparent;display:grid;grid-template-columns:1fr auto;gap:5px 8px;
+         align-items:start;z-index:10;pointer-events:none}
+  .plaque{background:var(--plaque);border:1px solid var(--plaque-br);border-radius:10px;
+          box-shadow:0 3px 10px #0005;padding:6px 10px;color:var(--cream)}
+  .brand{font-family:Georgia,'Times New Roman',serif;font-weight:800;letter-spacing:1px;font-size:clamp(17px,4.5vw,23px);line-height:1.05;color:var(--cream);white-space:nowrap}
+  .sub{font-size:10px;opacity:.72;letter-spacing:1.1px;text-transform:uppercase;color:var(--cream);white-space:nowrap}
+  /* Original stacked plaque, back in the top-left corner. It owns row 1 on its
+     own, so the location line has the whole width to sit on and never wraps,
+     while justify-self:start keeps the plaque hugging its own text. */
+  #titlePlaque{grid-column:1 / -1;justify-self:start;display:block;padding:6px 11px}
+  #shiftSub{opacity:.9;color:var(--gold);margin-top:1px}
+  .hud{grid-column:2;grid-row:2;text-align:right;font-variant-numeric:tabular-nums;justify-self:end}
+  .temper{font-size:9px;font-weight:900;letter-spacing:1.4px;text-transform:uppercase;opacity:.8}
+  .score{font-size:20px;font-weight:900;color:var(--gold);line-height:1.1;font-family:Georgia,serif}
+  #meter{height:13px;width:74px;margin-top:0;border-radius:7px;overflow:hidden;position:relative;
+         background:#000000aa;border:1px solid #ffffff66;box-shadow:inset 0 1px 2px #0008}
+  .fill{height:100%;width:0%;background:linear-gradient(90deg,#6f9e5f,#c9c15a 45%,#d9903f 72%,#c9503f);transition:.22s}
+  /* hairlines that break the bar into segments, as in the mockup */
+  #meter::after{content:'';position:absolute;inset:0;pointer-events:none;
+                background:repeating-linear-gradient(90deg,transparent 0 14px,#ffffff2e 14px 16px)}
+  #world{position:relative;flex:1 1 auto;min-height:0;overflow:hidden;background:var(--ground);touch-action:none}
+  #map,#backdrop{position:absolute;left:0;top:0;width:100%;height:100%;display:block}
+  /* Promote to its own layer so it rasterises once instead of repainting with the cars. */
+  /* The paper-grain filter was a full-screen feTurbulence. Even on a cached
+     layer, Safari re-rasterises filtered content and at device pixel ratio 3
+     that is millions of noise samples — it was the single biggest cause of the
+     sluggishness on a phone. The look is not worth the frame rate. */
+  #backdrop{z-index:0;pointer-events:none;transform:translateZ(0);contain:paint}
+  #map{z-index:1;background:transparent}
+  @media (prefers-reduced-motion:reduce){#backdrop{filter:none}}
+  #ferryTag{position:absolute;right:8px;top:8px;background:#0f2a35dd;border:1px solid #ffffff44;border-radius:999px;padding:5px 9px;font-size:11px;z-index:4;pointer-events:none}
+  #tip{position:absolute;left:50%;top:62%;transform:translate(-50%,-50%);z-index:9;pointer-events:none;background:#10242ded;border:1px solid #fff5;border-radius:18px;padding:12px 16px;text-align:center;max-width:78%;font-size:14px;box-shadow:0 7px 25px #0006}
+  #tip b{display:block;font-size:16px;margin-bottom:4px}.hide{display:none!important}
+  /* Two rows: the message box spans the full width on top, score and mute sit
+     beneath it. Squeezed between them it was only ~230px wide, which is why the
+     type had to be so small to fit. */
+  footer{position:relative;flex:0 0 auto;min-height:0;background:transparent;
+          padding:4px 9px calc(env(safe-area-inset-bottom) + 6px);z-index:12;display:grid;
+          grid-template-columns:auto auto 1fr;gap:6px 7px;align-items:end;font-size:12px;pointer-events:none}
+  #msgSlot{grid-column:1 / -1;grid-row:1}
+  #scorePlaque{grid-column:1;grid-row:2}
+  #temperPlaque{grid-column:2;grid-row:2}
+  footer #mute{grid-column:3;grid-row:2;justify-self:end}
+  /* Four status chips used to sit here. The space they freed is now where the
+     event messages land, instead of over the middle of the junction. */
+  footer > *{pointer-events:auto}
+  .time{font-family:Georgia,serif;font-size:22px;font-weight:900;color:var(--cream)}
+  #temperPlaque{display:flex;align-items:center;gap:6px;padding:4px 8px}
+  #temperPlaque .temper{margin-right:0;min-width:0;letter-spacing:1px;opacity:.85;color:var(--gold)}
+  #temperPlaque.critical{border-color:#c9503f;box-shadow:0 0 0 1px #c9503f99,0 3px 10px #0005;
+     animation:jamPulse .6s ease-in-out infinite alternate}
+  @keyframes jamPulse{to{box-shadow:0 0 0 2px #c9503f,0 3px 14px #c9503f66}}
+  /* Clean-sweep credit used to float up out of the junction itself, right where
+     the player needs to be watching cars. It now sits under the temper plaque,
+     out of the traffic but still in the same glance. */
+  #sweepNote{grid-column:1;grid-row:2;justify-self:start;align-self:center;background:var(--plaque);border:1px solid var(--plaque-br);
+             border-radius:8px;padding:4px 9px;color:var(--gold);font-size:11px;font-weight:900;
+             letter-spacing:.6px;white-space:nowrap;box-shadow:0 3px 10px #0005;pointer-events:none;
+             opacity:0;transform:translateY(-4px);transition:opacity .18s,transform .18s}
+  #sweepNote.show{opacity:1;transform:none}
+  #temperFace{font-size:16px;line-height:1}
+  .scoreRow{display:flex;align-items:baseline;gap:7px;min-width:0}
+  /* A six-figure day total must never push the jam meter off the screen. */
+  #scorePlaque{min-width:0}
+  #temperPlaque{flex:0 0 auto}
+  .hudsub{font-size:10px;letter-spacing:1px;color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  #scorePlaque{text-align:left;min-width:78px}
+  #clockPlaque .time{color:var(--cream)}
+  /* Hidden: it was eating vertical space the map needed. Kept in the DOM so
+     every statusEl write still has a target; the event banner carries the
+     messages that actually matter. */
+  #statusWrap{display:none}
+  #status{background:#141310cc;border:1px solid var(--plaque-br);border-radius:8px;padding:4px 9px;
+          font-size:11px;font-weight:700;color:var(--cream);max-width:96%;text-align:center}
+  /* Event chips, bottom right as in the mockup: icon, label, count badge. */
+  .chip{position:relative;width:50px;background:var(--plaque);border:1px solid var(--plaque-br);
+        border-radius:10px;padding:5px 2px 4px;text-align:center;color:var(--cream);
+        box-shadow:0 3px 10px #0005;opacity:.45;transition:opacity .2s,transform .2s}
+  .chip.on{opacity:1;transform:translateY(-2px)}
+  .chip.alert{border-color:#c9503f;box-shadow:0 0 0 1px #c9503f88,0 3px 10px #0005}
+  .chipIcon{font-size:17px;line-height:1.1}
+  .chipLabel{font-size:7.5px;font-weight:900;letter-spacing:.6px;opacity:.85;margin-top:1px}
+  .badge{position:absolute;top:-5px;right:-4px;min-width:16px;height:16px;border-radius:9px;
+         background:var(--gold);color:#241f12;font-size:10px;font-weight:900;line-height:16px;
+         border:1px solid #141310}
+  .badge.warn{background:var(--red);color:#fff}
+  .badge.hide{display:none}
+  #mute{min-width:0;width:34px;padding:6px 0;font-size:15px;background:var(--plaque);
+        color:var(--cream);border:1px solid var(--plaque-br);box-shadow:0 3px 10px #0005;border-radius:10px}
+  #mute:active{transform:translateY(1px)}
+  #mute{min-width:0;padding:4px 8px;font-size:16px;background:#ffffff1a;color:#fff;box-shadow:none;border-radius:10px;line-height:1}
+  #mute:active{transform:none;background:#ffffff33}
+  #status{font-weight:700}.time{font-size:18px;font-weight:900;font-variant-numeric:tabular-nums}
+  #overlay{position:absolute;left:0;top:0;right:0;bottom:0;background:#071218dd;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+     padding:calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 18px);
+     overflow-y:auto;-webkit-overflow-scrolling:touch}
+  #overlay > *{flex:0 0 auto}
+  #overlay h1{font-family:Georgia,serif;font-size:30px;margin:0 0 4px}#overlay h2{font-size:15px;opacity:.75;margin:0 0 10px}
+  #finalScore{font-size:44px;font-weight:900;color:#ffd077;margin:2px 0 0;line-height:1.05}
+  #totalLabel{font-size:10px;font-weight:900;letter-spacing:2px;opacity:.65;margin:2px 0 9px}.results{line-height:1.7;font-size:15px;margin-bottom:20px}
+  button{border:0;border-radius:16px;padding:14px 24px;font-weight:900;font-size:17px;background:#f0a941;color:#13242b;box-shadow:0 5px 0 #ad711d;min-width:190px;cursor:pointer;touch-action:manipulation;-webkit-appearance:none;appearance:none}
+  button:active{transform:translateY(3px);box-shadow:0 2px 0 #ad711d}
+  /* Sits over the board so the first road tap cannot land early, but stays
+     mostly transparent: the point is to let the player read the queues before
+     the clock moves. */
+  #readyOverlay{position:absolute;left:0;top:0;right:0;bottom:0;z-index:22;display:flex;
+     align-items:flex-end;justify-content:center;
+     padding:0 12px calc(env(safe-area-inset-bottom) + 22px);
+     background:linear-gradient(#07121800 14%,#071218d9);
+     overflow-y:auto;-webkit-overflow-scrolling:touch}
+  #readyOverlay.hide{display:none!important}
+  .readyCard{background:#10242df2;border:1px solid var(--plaque-br);border-radius:16px;
+     padding:17px 19px 19px;text-align:center;width:100%;max-width:400px;box-shadow:0 10px 30px #0008}
+  .readyShift{font-family:Georgia,serif;font-size:23px;font-weight:900;color:var(--gold);letter-spacing:1px}
+  .readySub{font-size:14px;opacity:.88;color:var(--gold);margin:6px 0 14px;line-height:1.4}
+  /* Swatch matches BOAT_COLOR, so the sentence points at the thing it names. */
+  .readyNote{display:flex;align-items:flex-start;gap:10px;text-align:left;font-size:14px;
+     line-height:1.45;color:var(--cream);margin:0 0 13px}
+  .readyNote .boatChip{flex:0 0 auto;width:15px;height:22px;border-radius:3px;margin-top:1px;
+     background:#ffd23f;border:1px solid #00000066;box-shadow:0 0 0 2px #ffd23f3d}
+  .readyNote .roadChip{flex:0 0 auto;width:15px;height:22px;border-radius:3px;margin-top:1px;
+     background:var(--road);border:1px solid #00000066;
+     box-shadow:inset 0 0 0 1px #8fe39a99, 0 0 0 2px #8fe39a33}
+  .readyNote .pedChip,
+  .readyNote .crashChip{flex:0 0 auto;width:15px;font-size:16px;line-height:22px;text-align:center}
+  .readyNote b{color:#ffd077}
+  .readyNote + .readyNote{margin-top:-3px}
+  #readyGoals{text-align:left;margin:2px 0 13px;padding:10px 12px;border-radius:11px;
+    background:#ffffff0f;border:1px solid #ffffff1c}
+  #readyGoals.hide{display:none!important}
+  .goalHead{font-size:10px;font-weight:900;letter-spacing:1.6px;text-transform:uppercase;
+    color:var(--gold);opacity:.85;margin-bottom:6px}
+  .goal{font-size:12.5px;line-height:1.45;color:var(--cream);opacity:.92}
+  .goal.met{color:#8fe39a} .goal.miss{opacity:.45}
+  #goBtn{min-width:0;width:100%;padding:15px 18px;font-size:18px;margin-top:3px}
+  /* Sits above the title screen as well as the end screen, so it can be opened
+     from either without either being torn down. */
+  #scoresOverlay{position:absolute;left:0;top:0;right:0;bottom:0;z-index:45;
+    background:linear-gradient(#173541f5,#071218fa);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;
+    padding:calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 18px);
+    overflow-y:auto;-webkit-overflow-scrolling:touch}
+  #scoresOverlay.hide{display:none!important}
+  #scoresOverlay > *{flex:0 0 auto}
+  #scoresOverlay h1{font-family:Georgia,serif;font-size:30px;margin:0 0 3px}
+  .scoreSub{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;opacity:.6;margin-bottom:14px}
+  #scoreList{list-style:none;margin:0 0 18px;padding:0;width:100%;max-width:360px}
+  #scoreList li{display:flex;align-items:baseline;gap:9px;padding:7px 11px;margin-bottom:5px;
+    background:#ffffff0d;border:1px solid #ffffff14;border-radius:10px;font-size:13.5px}
+  #scoreList li.fresh{background:#e8c86a24;border-color:#e8c86a88}
+  #scoreList .rk{width:22px;text-align:right;font-weight:900;opacity:.55;font-variant-numeric:tabular-nums}
+  #scoreList .sc{font-family:Georgia,serif;font-size:17px;font-weight:900;color:var(--gold);
+    font-variant-numeric:tabular-nums}
+  #scoreList .lb{flex:1 1 auto;text-align:left;font-size:11.5px;letter-spacing:.5px;
+    text-transform:uppercase;opacity:.78;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #scoreList .dt{font-size:10.5px;opacity:.45;white-space:nowrap}
+  #scoreEmpty{font-size:13px;opacity:.7;margin-bottom:18px}
+  #startOverlay{position:absolute;left:0;top:0;right:0;bottom:0;background:linear-gradient(#173541e8,#071218ee);z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+    /* Was a flat 30px pad with no scroll. On a short phone (or with iOS text
+       inflation) the buttons fell below the fold of an overflow:hidden #app and
+       could not be tapped at all. Now the panel scrolls and respects the notch. */
+    padding:calc(env(safe-area-inset-top) + 22px) 22px calc(env(safe-area-inset-bottom) + 22px);
+    overflow-y:auto;-webkit-overflow-scrolling:touch}
+  #startOverlay > *{flex:0 0 auto}
+  /* Shown when the page is being PREVIEWED rather than run: Quick Look, the
+     Files/Mail/Messages inline viewer and most in-app browsers render the HTML
+     but never execute the script, so every button is dead and no error appears. */
+  #nojs{position:fixed;inset:0;z-index:200;background:#0c1820;color:#f3e9d2;
+        display:flex;align-items:center;justify-content:center;overflow-y:auto;
+        padding:calc(env(safe-area-inset-top) + 20px) 18px calc(env(safe-area-inset-bottom) + 20px)}
+  .nojsCard{max-width:420px;width:100%;background:#152b36;border:1px solid #3b352a;
+        border-radius:18px;padding:22px 20px;box-shadow:0 14px 40px #000a;text-align:left}
+  .nojsLogo{font-family:Georgia,serif;font-size:34px;font-weight:900;line-height:.98;
+        text-align:center;color:#f3e9d2}
+  .nojsLead{margin:14px 0 4px;text-align:center;font-size:16px;font-weight:900;color:#ffd077}
+  #nojs p{font-size:14px;line-height:1.5;margin:14px 0 0}
+  #nojs b{color:#fff}
+  .key{display:inline-block;min-width:20px;padding:0 5px;border-radius:5px;
+        background:#ffffff1f;border:1px solid #ffffff33;text-align:center}
+  .nojsFoot{margin-top:16px;padding-top:12px;border-top:1px solid #ffffff1f;
+        font-size:12px;opacity:.7;line-height:1.45}
+  #startOverlay .logo{font-family:Georgia,serif;font-size:42px;font-weight:900;line-height:.98}
+  #startOverlay .mv{letter-spacing:2px;opacity:.7;font-size:12px;margin:8px 0 26px}
+  .how{max-width:300px;line-height:1.45;font-size:15px;margin-bottom:24px}.how strong{color:#ffd077}
+  button.ghost{margin-top:10px;background:transparent;color:var(--cream);
+               border:1px solid var(--plaque-br);box-shadow:none;font-size:15px}
+  button.ghost:active{transform:translateY(1px);background:#ffffff12}
+  #titleBest{margin-top:14px;font-size:12px;color:var(--gold);letter-spacing:.6px;min-height:16px}
+  #bestLine{margin-top:14px;font-size:12px;color:var(--gold);letter-spacing:.6px;min-height:16px}
+  .pulse{animation:pulse 1.2s infinite}@keyframes pulse{50%{transform:scale(1.035)}}
+  @media (prefers-reduced-motion:reduce){.pulse{animation:none}}
+  #diag{position:absolute;left:8px;top:calc(env(safe-area-inset-top) + 112px);z-index:60;
+        background:#0b0a08e8;border:1px solid #3b352a;border-radius:8px;padding:7px 9px;
+        font:11px/1.45 ui-monospace,Menlo,monospace;color:#d9f2c2;white-space:pre;pointer-events:none}
+  #diag.hide{display:none}
+  #errbar{position:absolute;left:0;right:0;top:0;z-index:99;background:#7d1d1d;color:#ffe;font:11px/1.35 ui-monospace,Menlo,monospace;
+          padding:calc(env(safe-area-inset-top) + 8px) 10px 8px;white-space:pre-wrap;word-break:break-word;max-height:45%;overflow:auto}
+  .edge{fill:none;stroke:var(--edge);stroke-linecap:round;stroke-linejoin:round}
+  .asphalt{fill:none;stroke:var(--road);stroke-linecap:round;stroke-linejoin:round}
+  .dash{fill:none;stroke:#f4e6a8;stroke-width:2.5;stroke-dasharray:14 22;opacity:.5}
+  .glow{fill:none;stroke:#8fe39a;stroke-linecap:round;opacity:0;transition:opacity .12s}
+  .glow.on{opacity:.42}
+  .stopzone{fill:none;stroke:#f6f2e4;stroke-width:3;stroke-dasharray:10 12;opacity:0;transition:opacity .18s}
+  .stopzone.on{opacity:.34}
+  .gate{stroke:#6f9e5f;stroke-width:11;stroke-linecap:round;opacity:0;
+        transition:opacity .25s,stroke .25s}
+  .stopbar{stroke:#f6f2e4;stroke-width:5;stroke-linecap:round;opacity:.8}
+  /* Labels live in screen space at a fixed pixel size, so they stay legible
+     at any zoom and get clamped inside the viewport rather than cropped. */
+  #roadLabels{display:none}
+  .rlbl .boatcnt{margin-left:4px;padding:0 5px;border-radius:6px;background:#ffd23f;
+               color:#3a2a00;font-weight:900}
+  .rlbl .boatcnt.none{display:none}
+  .rlbl .cnt{margin-left:0;padding:0 5px;border-radius:6px;background:#22303622;
+             font-variant-numeric:tabular-nums;opacity:.8}
+  .rlbl.busy .cnt{background:#d9544d;color:#fff;opacity:1}
+  .rlbl{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;
+        font-size:11px;font-weight:800;letter-spacing:.2px;color:#223036;
+        background:#fffffff2;border:1px solid #00000018;border-radius:9px;
+        padding:3px 7px;box-shadow:0 1px 3px #0003}
+  .car rect.body{stroke:#172028;stroke-width:1.6}
+  .car rect.win{fill:#b9d9e6aa;stroke:none}
+  .car.mad rect.body{stroke:#ff4a3d;stroke-width:3}
+  .car.truck rect.body{fill:#8d8577;stroke:#241f18;stroke-width:2.2}
+  .glow.warn{animation:greenwarn .42s steps(2,end) infinite}
+  @keyframes greenwarn{50%{opacity:.12}}
+  .glow.boost{stroke:#ffe08a;opacity:.72}
+  @media (prefers-reduced-motion:reduce){.glow.warn{animation:none;opacity:.22}}
+  .car.boat rect.body{stroke:#5c3d00;stroke-width:2.5}
+  .car.boat rect.win{fill:#7a5a1088}
+  .car .halo{fill:none;stroke:#ffd23f;stroke-width:3;opacity:.85;animation:halo 1s ease-in-out infinite}
+  @keyframes halo{50%{opacity:.25;stroke-width:5}}
+  .car.missed .halo{stroke:#9a9a9a;animation:none;opacity:.5}
+  .car.missed rect.body{fill:#8f8a7e;stroke:#4a4a4a}
+  @media (prefers-reduced-motion:reduce){.car .halo{animation:none}}
+  .car.near rect.body{stroke:#fff;stroke-width:3}
+  .pop{font-size:26px;font-weight:900;text-anchor:middle;paint-order:stroke;stroke:#0b1a22;stroke-width:5;stroke-linejoin:round}
+  .pop.good{fill:#8ff2a4}.pop.bad{fill:#ff8a7d}.pop.boat{fill:#ffd45e}
+  .ped{font-size:30px;text-anchor:middle;dominant-baseline:middle;pointer-events:auto;cursor:pointer;paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round}
+  .ped.stepping{animation:pedStep .45s ease-in-out infinite alternate}
+  @keyframes pedStep{to{transform:scale(1.22)}}
+  .ped.waiting{animation:pedPulse .7s ease-in-out infinite alternate}
+  .ped.crossing{stroke:#8ff2a4}
+  .ped.hide{display:none}
+  @keyframes pedPulse{to{font-size:35px}}
+  #crossingGuard{transition:transform .16s ease-out;transform-origin:0 0;transform-box:view-box;filter:drop-shadow(0 2px 2px #0006)}
+  #guardArm,#guardArm2{stroke:#f7f7f2;stroke-width:7;stroke-linecap:round}
+  #guardBody{fill:#f7f7f2;stroke:#172028;stroke-width:2}
+  #guardBelt,#guardShorts{fill:#233945;stroke:#172028;stroke-width:1.5}
+  #guardHead{fill:#f5d5b5;stroke:#172028;stroke-width:2}
+  #guardHat{fill:#233945;stroke:#172028;stroke-width:2}
+  #guardBadge{fill:#d9ad43;stroke:#172028;stroke-width:1}
+  #guardGlove{fill:#fff;stroke:#172028;stroke-width:1.2}
+  #guardWhistle{fill:#d9ad43;stroke:#172028;stroke-width:1}
+  #guardRain{fill:#f1cc42;stroke:#172028;stroke-width:2;opacity:0;transition:opacity .35s}
+  #crossingGuard.rain #guardRain{opacity:1}
+  #crossingGuard.rain #guardBody,#crossingGuard.rain #guardBadge{opacity:.08}
+  #crossingGuard.wave #guardArm{animation:guardWave .28s ease-out}
+  #crossingGuard.pedwave #guardArm,#crossingGuard.pedwave #guardArm2{animation:pedGuardWave .42s ease-out}
+  #crossingGuard.celebrate{animation:guardCelebrate .55s ease-out}
+  #crossingGuard.alert{animation:guardAlert .18s ease-in-out 3}
+  @keyframes guardWave{50%{stroke-width:11}}
+  @keyframes pedGuardWave{50%{stroke-width:11;stroke:#fff6a8}}
+  @keyframes guardCelebrate{35%{filter:drop-shadow(0 0 10px #fff6a8)}70%{filter:drop-shadow(0 0 5px #fff)}}
+  @keyframes guardAlert{50%{filter:drop-shadow(0 0 8px #ffef83)}}
+  .car.ambulance rect.body{fill:#f7f7f2;stroke:#d9544d;stroke-width:3}
+  .car.ambulance rect.win{fill:#9bd8ed}
+  .car.ambulance .ambMark{fill:#d9544d;font-size:15px;font-weight:900;text-anchor:middle;dominant-baseline:middle}
+  .car.ambulance .ambHalo{fill:none;stroke:#5db9ff;stroke-width:4;animation:ambFlash .45s infinite alternate}
+  @keyframes ambFlash{to{stroke:#ff5a52;stroke-width:7}}
+
+  #strikes{font-size:12px;letter-spacing:2px}
+  #boatHud{font-size:11px;color:#ffd23f;font-weight:800}
+  .car.wreck rect.body{fill:#4a3f3a;stroke:#ff4a3d;stroke-width:3}
+  .car.wreck rect.win{fill:#00000055}
+  .boomtxt{font-size:52px;text-anchor:middle;dominant-baseline:middle}
+  .chip.hot{animation:comboPop .28s ease-out}
+  @keyframes comboPop{50%{transform:scale(1.18)}}
+  /* All in-play messages share one box in the footer, beside the score. The
+     field of play is never drawn over: whatever the game wants to say, it says
+     it down here. Fixed height, so the map never resizes when a message lands. */
+  #msgSlot{position:relative;min-width:0;height:62px;pointer-events:none}
+  #eventBanner,#moment,#coach{position:absolute;left:0;right:0;top:0;bottom:0;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:7px 12px;text-align:center;overflow:hidden;pointer-events:none;
+    border-radius:13px;opacity:0;transition:opacity .16s;box-shadow:0 5px 16px #0007}
+  #eventBanner.show,#moment.show,#coach.show{opacity:1}
+  #eventBanner{z-index:2;background:#10242df5;border:2px solid #ffd45e;
+    font-size:14.5px;font-weight:900;letter-spacing:.2px;line-height:1.25;color:var(--cream)}
+  #eventBanner.danger{border-color:#ff7568;color:#fff}
+  .rlbl.warn{background:#fff2c8;border-color:#e7a23b}
+  .rlbl.critical{background:#ffd0c9;border-color:#d9544d;animation:roadPulse .7s ease-in-out infinite alternate}
+  @keyframes roadPulse{to{transform:translate(-50%,-50%) scale(1.06)}}
+  #starsLine{font-size:22px;letter-spacing:2px;margin:-4px 0 5px}
+  #shiftLine{font-size:12px;font-weight:800;letter-spacing:.6px;color:var(--gold);margin:0 0 7px;min-height:15px}
+  #bestLine{font-size:12px;opacity:.8;margin-bottom:8px}
+
+  /* Sprint 5 — rain and Beach Road flooding */
+  #weatherHud{position:absolute;left:8px;top:8px;z-index:7;background:#0f2a35dd;border:1px solid #ffffff44;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:900;pointer-events:none;transition:.2s}
+  #weatherHud.wet{border-color:#7bc7ee;color:#dff5ff}
+  #weatherHud.high{border-color:#5db9ff;background:#0c4160e8;color:white;animation:weatherPulse .8s ease-in-out infinite alternate}
+  @keyframes weatherPulse{to{transform:scale(1.04)}}
+  #rainOverlay{position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0;transition:opacity .8s;background-image:repeating-linear-gradient(105deg,transparent 0 18px,#d9f3ff55 19px 21px,transparent 22px 39px);background-size:55px 55px;animation:rainMove .38s linear infinite}
+  #rainOverlay.on{opacity:.28} #rainOverlay.heavy{opacity:.48}
+  @keyframes rainMove{from{background-position:0 -60px}to{background-position:-25px 60px}}
+  .floodwater{fill:none;stroke:#58b9df;stroke-linecap:round;stroke-linejoin:round;opacity:0;transition:opacity .7s,stroke-width .7s;filter:drop-shadow(0 0 5px #b9efff)}
+  .floodwater.stage1{opacity:.22;stroke-width:30}
+  .floodwater.stage2{opacity:.38;stroke-width:38}
+  .floodwater.stage3{opacity:.56;stroke-width:46;animation:waterShimmer .8s ease-in-out infinite alternate}
+  @keyframes waterShimmer{to{opacity:.7}}
+  .rlbl.flooded{background:#d9f5ff;border-color:#58b9df;color:#123b4c}
+
+  /* Sprint 10 — bigger emotional peaks without touching traffic geometry. */
+  #moment{z-index:3;background:#10242df5;border:2px solid #ffd45e;
+    font-family:Georgia,'Times New Roman',serif;font-size:19px;font-weight:900;
+    line-height:1.1;color:#fff7d0}
+  #moment small{display:block;margin-top:4px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:11px;font-weight:800;letter-spacing:.9px;text-transform:uppercase;color:#ffd45e;line-height:1.3}
+  #moment.danger,#moment.teach{border-color:#ff7568}
+  #moment.danger{color:#ffd4cf} #moment.danger small{color:#ff8a7d}
+  #moment.teach{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:#fff}
+  #moment.teach small{text-transform:none;letter-spacing:.1px;font-size:12px;
+    font-weight:600;color:#f3e9d2;line-height:1.35;margin-top:5px}
+  #flowCall{display:none;position:absolute;left:50%;bottom:78px;transform:translateX(-50%) scale(.88);z-index:9;
+    background:#141310e8;border:1px solid var(--gold);border-radius:999px;padding:6px 12px;color:var(--gold);
+    font-size:12px;font-weight:900;letter-spacing:1px;opacity:0;pointer-events:none;transition:.18s}
+  #flowCall.show{opacity:1;transform:translateX(-50%) scale(1)}
+  #nextTarget{font-size:12.5px;font-weight:800;color:var(--cream);margin:-2px 0 10px;min-height:16px}
+  #overlay .results{max-height:none;overflow:visible;padding:0 2px;font-size:12.5px;line-height:1.65;margin-bottom:14px}
+  #overlay .heroLine{font-size:15px;font-weight:900;color:var(--cream);margin:0 0 8px}
+  /* Each figure is one unbreakable unit, so "Best flow" can never end up on a
+     different line from the number it belongs to. */
+  #overlay .results .stat{white-space:nowrap;display:inline-block}
+  #overlay .goalsBox{text-align:left;display:inline-block;margin:0 0 9px;padding:8px 11px;
+    border-radius:10px;background:#ffffff0d;border:1px solid #ffffff18}
+  #overlay .goal{font-size:12px;line-height:1.5}
+  #coach{z-index:4;background:#241f12f5;border:2px solid #e8c86a;
+    color:var(--cream);font-size:13px;font-weight:750;line-height:1.35}
+  #coach b{color:#ffd45e}
+
+</style>
+</head>
+<body>
+<div id="nojs">
+  <div class="nojsCard">
+    <div class="nojsLogo">FIVE<br>CORNERS</div>
+    <div class="nojsLead">Open this in a browser to play.</div>
+    <p>You are looking at a <b>file preview</b>. Previews cannot run games, so
+       every button on this screen is dead.</p>
+    <p><b>iPhone or iPad</b><br>Tap the share button
+       <span class="key">&#x2934;</span> at the top or bottom of this preview,
+       then choose <b>Safari</b> or <b>Chrome</b>.</p>
+    <p><b>Android</b><br>Tap the menu <span class="key">&#8942;</span>, then
+       <b>Open in browser</b>.</p>
+    <p><b>Mac or PC</b><br>Save the file, then drag it onto a browser window.</p>
+    <div class="nojsFoot">This notice disappears on its own once the game is
+       really running.</div>
+  </div>
+</div>
+<script>var n=document.getElementById('nojs');if(n)n.parentNode.removeChild(n);</script>
+<noscript><style>#startOverlay{display:none!important}</style></noscript>
+<div id="app">
+  <header>
+    <div class="plaque" id="titlePlaque">
+      <div class="brand">FIVE CORNERS</div>
+      <div class="sub" id="sub">Vineyard Haven</div>
+      <div class="sub" id="shiftSub">Morning Boat</div>
+    </div>
+    <div class="plaque hud" id="clockPlaque">
+      <div class="temper">Time</div>
+      <div class="time" id="clock">1:30</div>
+    </div>
+    <div id="sweepNote"></div>
+  </header>
+  <div id="world">
+    <!-- Static backdrop. Built once at load and never touched again, so the
+         browser can raster-cache it instead of repainting ~190 shapes behind
+         every car, every frame. -->
+    <svg id="backdrop" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        <filter id="paper" x="-6%" y="-6%" width="112%" height="112%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="7" result="n"/>
+          <feColorMatrix in="n" type="saturate" values="0" result="g"/>
+          <feComponentTransfer in="g" result="grain">
+            <feFuncA type="linear" slope="0.10" intercept="0"/>
+          </feComponentTransfer>
+          <feComposite in="grain" in2="SourceAlpha" operator="in" result="masked"/>
+          <feBlend in="SourceGraphic" in2="masked" mode="multiply"/>
+        </filter>
+        <filter id="wash" x="-10%" y="-10%" width="120%" height="120%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="2" seed="3" result="t"/>
+          <feDisplacementMap in="SourceGraphic" in2="t" scale="4.5" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+      </defs>
+      <g id="scenery"></g>
+      <g id="sidewalks"></g>
+      <g id="roadEdges"></g>
+      <g id="roadFill"></g>
+      <g id="crosswalks"></g>
+      <g id="island"></g>
+      <g id="roadDash"></g>
+    </svg>
+    <svg id="map" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <g id="floodLayer"></g>
+      <g id="roadGlow"></g>
+      <g id="stopBars"></g>
+      <g id="routes" fill="none" stroke="none"></g>
+      <g transform="translate(475 468)">
+        <g id="crossingGuard">
+          <circle id="guardHead" cx="0" cy="-14" r="9"></circle>
+          <path id="guardHat" d="M -11 -19 Q 0 -29 11 -19 L 9 -15 L -9 -15 Z"></path>
+          <path d="M -12 -18 L 13 -18" stroke="#f7f7f2" stroke-width="2"></path>
+          <rect id="guardBody" x="-9" y="-5" width="18" height="20" rx="5"></rect>
+          <circle id="guardBadge" cx="4" cy="1" r="2.7"></circle>
+          <rect id="guardBelt" x="-9" y="11" width="18" height="4" rx="1"></rect>
+          <path id="guardShorts" d="M -8 15 L 8 15 L 7 25 L 1 25 L 0 19 L -1 25 L -7 25 Z"></path>
+          <line id="guardArm" x1="-5" y1="1" x2="-5" y2="-30"></line>
+          <line id="guardArm2" x1="5" y1="2" x2="12" y2="15"></line>
+          <circle id="guardGlove" cx="-5" cy="-32" r="4"></circle>
+          <circle id="guardWhistle" cx="-7" cy="-8" r="2"></circle>
+          <line x1="-4" y1="24" x2="-8" y2="35" stroke="#233945" stroke-width="6" stroke-linecap="round"></line>
+          <line x1="4" y1="24" x2="8" y2="35" stroke="#233945" stroke-width="6" stroke-linecap="round"></line>
+          <path id="guardRain" d="M -13 -6 Q 0 -13 13 -6 L 11 22 L -11 22 Z"></path>
+        </g>
+      </g>
+      <g id="carLayer"></g>
+      <g id="fx"></g>
+      <text id="ped" class="ped hide">🚶</text>
+    </svg>
+    <div id="roadLabels"></div>
+    <div id="rainOverlay"></div>
+    <div id="weatherHud">☀️ DRY</div>
+    <div id="ferryTag"><span id="ferryMsg">⛴️ Ferry in 0:45</span></div>
+    <div id="flowCall"></div>
+    <div id="tip" class="hide"></div>
+  </div>
+  <footer>
+    <div class="plaque" id="scorePlaque">
+      <div class="temper">Score</div>
+      <div class="scoreRow">
+        <div class="score"><span id="score">0</span></div>
+        <div class="hudsub"><span id="strikes"></span> <span id="boatHud"></span></div>
+      </div>
+    </div>
+    <div id="statusWrap"><div id="status">Tap a road to begin</div></div>
+    <div class="plaque" id="temperPlaque">
+      <div class="temper" id="temperText">JAM</div>
+      <div id="meter"><div class="fill" id="temperFill"></div></div>
+      <div id="temperFace">🙂</div>
+    </div>
+    <div id="msgSlot">
+      <div id="eventBanner"></div>
+      <div id="moment"></div>
+      <div id="coach"></div>
+    </div>
+    <button id="mute" aria-label="Mute game sounds">🔊</button>
+  </footer>
+  <div id="diag" class="hide"></div>
+  <div id="errbar" class="hide"></div>
+  <div id="overlay" class="hide"><h1>FIVE CORNERS</h1><h2 id="endTitle">SHIFT COMPLETE</h2><div id="finalScore">0</div><div id="totalLabel">DAY TOTAL</div><div id="starsLine">☆☆☆☆☆</div><div id="shiftLine"></div><div id="bestLine"></div><div id="nextTarget"></div><div class="results" id="results"></div><button id="again">PLAY AGAIN</button><button id="skip" class="ghost hide">NEXT SHIFT</button><button id="scoresBtn2" class="ghost">TOP TEN</button></div>
+  <div id="readyOverlay" class="hide">
+    <div class="readyCard">
+      <div class="readyShift" id="readyShift">MORNING BOAT</div>
+      <div class="readySub" id="readyRule">Traffic is already queued.</div>
+      <div class="readyNote"><span class="roadChip"></span>Tap a roadway to let its traffic move — only one runs at a time.</div>
+      <div class="readyNote"><span class="crashChip">✋</span><b>Tap the crossing guard</b> in the middle of the junction to stop the road you have open. Cars already crossing will finish.</div>
+      <div class="readyNote"><span class="crashChip">💥</span><b>Let the junction clear before you switch.</b> Cars already crossing need a moment; cut them off and they collide.</div>
+      <div class="readyNote"><span class="boatChip"></span>Yellow cars have a ferry reservation to make. Get them through before the boat sails.</div>
+      <div class="readyNote"><span class="pedChip">🚶</span>Tap the walking figure to wave a pedestrian across — that road holds until they are over. Massachusetts law says traffic yields, and they <b>will step out on their own</b> after a few seconds whether you are ready or not.</div>
+      <div id="readyGoals"></div>
+      <button id="goBtn">START CLOCK</button>
+    </div>
+  </div>
+  <div id="scoresOverlay" class="hide">
+    <h1>TOP TEN</h1>
+    <div class="scoreSub">Best shifts on this device</div>
+    <ol id="scoreList"></ol>
+    <div id="scoreEmpty" class="hide">Nothing logged yet. Play a shift.</div>
+    <button id="scoresClose" class="ghost">CLOSE</button>
+  </div>
+  <div id="startOverlay">
+    <div class="logo">FIVE<br>CORNERS</div><div class="mv">VINEYARD HAVEN, MASSACHUSETTS</div>
+    <div class="how"><strong>You are the crossing guard.</strong><br>Tap a roadway to wave traffic through and keep the five approaches moving.</div>
+    <button id="startBtn">PLAY SHIFT</button>
+    <button id="endlessBtn" class="ghost">ENDLESS</button>
+    <button id="scoresBtn" class="ghost">TOP TEN</button>
+    <div id="titleBest"></div>
+  </div>
+</div>
+
+<script>
+/* Loads before the game script so it catches syntax errors in it too. */
+(function(){
+  var bar=document.getElementById('errbar');
+  function show(msg){bar.classList.remove('hide');bar.textContent=(bar.textContent?bar.textContent+'\n\n':'')+msg}
+  window.addEventListener('error',function(e){show('JS ERROR\n'+(e.message||e.type)+'\nline '+(e.lineno||'?')+':'+(e.colno||'?'))});
+  window.addEventListener('unhandledrejection',function(e){show('PROMISE REJECTED\n'+e.reason)});
+  window.__fcReady=false;
+  setTimeout(function(){ if(!window.__fcReady) show('Game script never finished running.\nNothing above? Then it failed to parse.'); },1200);
+})();
+</script>
+
+<script>
+(() => {
+  // ---- Records -------------------------------------------------------------
+  const BEST_KEY='fiveCorners.best.v1';
+  let best={campaign:0,endless:0,wave:0};
+  try{ const raw=localStorage.getItem(BEST_KEY); if(raw) best=Object.assign(best,JSON.parse(raw)) }catch(e){}
+  function saveBest(){ try{ localStorage.setItem(BEST_KEY,JSON.stringify(best)) }catch(e){} }
+
+  const BUILD='s15a · 2026-08-15';
+  // ---- Top ten -------------------------------------------------------------
+  // Every finished run is logged, win or lose, and the list is kept sorted so
+  // rendering is just a read. Local to this device — see notes on going global.
+  const TOP_KEY='fiveCorners.top10.v1', TOP_N=10;
+  let topTen=[];
+  try{ const raw=localStorage.getItem(TOP_KEY); if(raw) topTen=JSON.parse(raw)||[] }catch(e){}
+  if(!Array.isArray(topTen)) topTen=[];
+  function saveTop(){ try{ localStorage.setItem(TOP_KEY,JSON.stringify(topTen)) }catch(e){} }
+  function recordScore(value,label,stars){
+    value=Math.floor(value);
+    if(!(value>0)) return -1;
+    const entry={s:value,n:label,st:stars,d:Date.now()};
+    topTen.push(entry);
+    topTen.sort(function(a,b){ return b.s-a.s || a.d-b.d });   // ties: earliest wins
+    topTen=topTen.slice(0,TOP_N);
+    saveTop();
+    return topTen.indexOf(entry);      // -1 if it did not make the cut
+  }
+  function shortDate(ms){
+    try{ return new Date(ms).toLocaleDateString(undefined,{month:'short',day:'numeric'}) }
+    catch(e){ return '' }
+  }
+  function renderScores(freshIx){
+    const list=document.getElementById('scoreList'), empty=document.getElementById('scoreEmpty');
+    if(!list) return;
+    list.innerHTML='';
+    if(empty) empty.classList.toggle('hide', topTen.length>0);
+    topTen.forEach(function(e,i){
+      const li=document.createElement('li');
+      if(i===freshIx) li.className='fresh';
+      const stars=e.st?'\u2605'.repeat(e.st):'';
+      li.innerHTML='<span class="rk">'+(i+1)+'</span>'+
+                   '<span class="sc">'+e.s.toLocaleString()+'</span>'+
+                   '<span class="lb">'+(e.n||'')+(stars?' '+stars:'')+'</span>'+
+                   '<span class="dt">'+shortDate(e.d)+'</span>';
+      list.appendChild(li);
+    });
+  }
+  const NS='http://www.w3.org/2000/svg';
+  const svg=document.getElementById('map');
+  const roads=['N','W','E','SE','S'];
+  // Amber and cream were pulled from this list: they read as the same colour
+  // as a flagged car at phone size, which is why boat traffic was unreadable.
+  const colors=['#e45247','#67a8d8','#739b62','#9d72ba','#2f8f7f','#3f7fa8','#c2544f'];
+  const BOAT_COLOR='#ffd23f';
+
+  // ---- Geometry traced from the aerial (viewBox units, 0..1000) -------------
+  // Each leg runs OUTER EDGE -> HUB. The first point sits off-canvas so cars
+  // have somewhere to queue out of sight.
+  const HUB=[475,468];
+  const legs={
+    N :[[625,-230],[600,-60],[595,0],[560,100],[535,200],[512,300],[492,390],[475,468]],
+    W :[[-230,428],[-60,436],[0,440],[120,445],[250,450],[360,456],[475,468]],
+    E :[[1230,487],[1060,484],[1000,482],[850,478],[700,476],[560,472],[475,468]],
+    SE:[[1190,1055],[1060,935],[1000,885],[900,805],[800,725],[700,640],[620,570],[540,510],[475,468]],
+    S :[[410,1230],[413,1060],[415,1000],[418,900],[425,800],[438,700],[450,620],[462,540],[475,468]]
+  };
+  const widthOf={N:54,W:56,E:56,SE:48,S:44};
+  const nameOf={N:'Water Street',W:'Beach Street',E:'Beach Street Ext.',SE:'Beach Road',S:'Lagoon Pond Road'};
+  // Where each label sits: distance back from the hub along the leg, plus a
+  // nudge off the centreline so it sits beside the asphalt, not on it.
+  const labelAt={N:235,W:160,E:170,SE:185,S:245};
+  const labelNudge={N:[52,0],W:[0,-50],E:[0,-50],SE:[42,-36],S:[-48,0]};
+  // Where traffic from each street actually goes, most popular destination
+  // first. N=Water St, W=Beach St, E=Beach St Ext., SE=Beach Rd, S=Lagoon Pond Rd.
+  const turnPref={
+    SE:['W','N','S','E'],   // Beach Rd        -> Beach St, Water St, Lagoon Pond, Beach St Ext.
+    N :['SE','W','S','E'],  // Water St        -> Beach Rd, Beach St, Lagoon Pond, Beach St Ext.
+    S :['SE','W','N','E'],  // Lagoon Pond Rd  -> Beach Rd, Beach St, Water St, Beach St Ext.
+    E :['SE','W','N','S'],  // Beach St Ext.   -> Beach Rd, Beach St, Water St, Lagoon Pond
+    W :['SE','N','S','E']   // Beach St        -> (not specified; mirrors the pattern above)
+  };
+  const turnWeight=[0.40,0.28,0.20,0.12];
+
+  const CAR_W=17, CAR_L=30;
+  // What collides is the car's CORNER, which reaches further than half its
+  // length. Size the gap off that, not off CAR_L.
+  const CORNER=Math.hypot(CAR_L/2,CAR_W/2);
+  const GAP=2*CORNER+12;     // straight-road centre-to-centre spacing
+  // Elliptical exclusion zone: SEP_A along the heading, SEP_B across it.
+  // SEP_B must stay below the lane separation (23 on the narrowest street)
+  // or opposing traffic would brake for itself.
+  const SEP_A=CAR_L+14;      // 44 - leaves 14 units of bumper clearance
+  const SEP_B=CAR_W+3;       // 20 - narrower than any lane pair
+  const CREEP=26;            // crawl speed used to unstick a car in the junction
+  const ANGER_RATE=2.25;     // anger per second stopped
+  const ANGER_COOL=9;        // ...and how fast it cools once moving
+
+  // ---- Boat traffic ----
+  // Some cars are trying to CATCH the ferry, not escape it. They exit north
+  // toward the harbour and must clear the junction before the boat sails, which
+  // is what stops "always serve the longest queue" from being the whole game.
+  const BOAT_EXIT='N';       // Water Street runs down to the terminal
+  const SAIL_AT=72;          // when the boat leaves
+  const BOAT_SHARE=0.62;     // share of harbour-bound cars that are catching it
+  const BOAT_BONUS=190, BOAT_MISS=-240;
+  // A crash used to cost 150 points, three seconds of blocked junction AND the
+  // flow multiplier. Three penalties for one mistake made a mid-shift collision
+  // feel unrecoverable. Losing a 4x multiplier is punishment enough.
+  const MAX_STRIKES=3, CRASH_COST=0, BLOCK_SECS=1.6;
+  // The junction-clearance rule is taught, not punished: the first collision on
+  // MORNING BOAT is a warning — no strike, no points lost, one explanation.
+  // It was previously latched in localStorage, which meant a player who had
+  // seen it once could never see it again on any device. It is now simply a
+  // property of the opening shift, so the rule is statable and always visible
+  // to someone starting a day. Midday and Five O'Clock give no free pass.
+  let crashWarned=false, collisions=0;
+  try{ localStorage.removeItem('fiveCorners.taughtCrash.v1') }catch(e){}
+  const BOOM_SECS=0.8;       // how long the crash burst is on screen
+  const NEAR_R=34, NEAR_BONUS=0;   // near misses are warnings, not a farming strategy
+
+  // ---- Pedestrians ----
+  // Summer Vineyard Haven is thick with them. A crosswalk closing locks one
+  // street regardless of what you want, so it is a second resource to juggle.
+  const PED_EVERY=[12,22];    // seconds between crossings (random in range)    // seconds between crossings (random in range)
+  const PED_SECS=2.6;        // how long a crossing takes
+  // Massachusetts law: traffic yields to a pedestrian in a crosswalk. They do
+  // not stand there waiting for permission, and neither do these. After this
+  // long they step out regardless — waving them early is a courtesy worth
+  // points, not the thing that makes the crossing happen.
+  const PED_PATIENCE=6.0;    // seconds before they walk out on their own
+  const PED_WARN=1.6;        // ...and how long before that they start moving
+  const PED_HIT=-200;        // running one down
+
+  // ---- Shifts ----
+  // Same map, different day. Gives the 90 seconds somewhere to vary.
+  // Each shift now changes a RULE, not just the arrival rate. Turning the dial
+  // up three times is one shift played three times; changing what the player
+  // has to do is three shifts.
+  const SHIFTS=[
+    {name:'MORNING BOAT', rate:[1.54,2.24,3.36], mix:{SE:34,W:30,S:16,N:12,E:8},  sail:68, peds:1.0,
+     force:'rush',      green:1.00, rule:'The boat is the whole shift. Ferry traffic runs heavy and the rush is guaranteed.'},
+    {name:'MIDDAY RUSH',  rate:[1.96,2.8,3.92], mix:{SE:28,W:26,S:18,N:18,E:10}, sail:66, peds:1.9,
+     force:'ambulance', green:1.00, rule:'The crosswalk never rests, and an ambulance is coming through.'},
+    {name:'FIVE O\'CLOCK',rate:[2.38,3.22,4.34], mix:{SE:26,W:24,S:20,N:22,E:8},  sail:64, peds:1.4,
+     force:'flood',     green:0.72, rule:'Tired drivers, rising water. Your greens lapse faster \u2014 keep tapping.'}
+  ];
+  let shiftIx=0, shift=SHIFTS[0];
+  // Three goals a shift. Score alone is a weak thing to chase, and a goal is a
+  // tutorial that does not feel like one: chasing "no collisions" teaches
+  // junction timing better than any card can.
+  const GOAL_BONUS=400;
+  const GOALS=[
+    {id:'clean', text:'Finish with no collisions',        test:function(r){ return r.collisions===0 }},
+    {id:'boat',  text:'Get every ferry car aboard',       test:function(r){ return r.boatTotal>0 && r.boatMade===r.boatTotal }},
+    {id:'walk',  text:'Wave 3 pedestrians across safely', test:function(r){ return r.pedCrossed>=3 && r.pedHits===0 }},
+    {id:'calm',  text:'Keep the worst backup under 30',   test:function(r){ return r.peakQueued<30 }},
+    {id:'flow',  text:'Reach flow x3',                    test:function(r){ return r.flowMult>=3 || r.maxFlow>=8 }}
+  ];
+  function goalsFor(ix){ return [GOALS[0], GOALS[1+(ix%2)], GOALS[3+(ix%2)]] }
+
+  // ---- Modes ---------------------------------------------------------------
+  // Campaign: three fixed 90s shifts. Endless: no clock, escalating arrivals,
+  // hazards recur, and you play until three strikes or gridlock. The arcade
+  // loop is 'how far did I get', not 'did I finish'.
+  let endless=false, wave=0, waveT=0;
+  const WAVE_SECS=26;          // how long each escalation step lasts
+  const WAVE_RATE=0.16;        // arrivals added per wave
+  const WAVE_MAX=2.4;          // ceiling on the multiplier
+
+
+  // ---- Per-run schedule ----------------------------------------------------
+  // The event times used to be constants, identical in every single run, so the
+  // whole 90 seconds was memorisable after three or four plays. They are now
+  // rolled fresh each shift: the ferry stays the anchor beat, everything else
+  // jitters, and the optional hazards are drawn from a pool so some runs get an
+  // ambulance and no second flood stage, and some get the reverse.
+  let SCH={};
+  const jit=(base,spread)=>Math.max(4, Math.round(base + (Math.random()*2-1)*spread));
+  function rollSchedule(){
+    const s={};
+    s.RAIN   = jit(14,6);
+    s.FERRY  = jit(30,5);
+    s.SAIL   = s.FERRY + jit(42,6);
+    s.RAMP   = jit(18,4);
+
+    // Draw 2 of 3 hazard tracks, so no two shifts feel the same.
+    const pool=['flood','ambulance','rush'];
+    for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
+    // The shift's signature hazard is guaranteed; the second is still a roll,
+    // so the run varies without the shift losing its identity.
+    const forced=(!endless && shift && shift.force) ? shift.force : null;
+    const picked = forced ? [forced].concat(pool.filter(h=>h!==forced).slice(0,1)) : pool.slice(0,2);
+    s.hasFlood = picked.includes('flood');
+    s.hasAmb   = picked.includes('ambulance');
+    s.hasRush  = picked.includes('rush');
+
+    if(s.hasFlood){
+      s.FLOOD = jit(34,7);
+      s.HIGH  = s.FLOOD + jit(18,5);
+      s.DEEP  = s.HIGH  + jit(24,6);
+    }else{ s.FLOOD=s.HIGH=s.DEEP=9999 }
+    s.AMB = s.hasAmb ? jit(46,10) : 9999;
+    // Keep the ambulance deadline clear of the boat, whichever way both rolled.
+    if(s.hasAmb && Math.abs((s.AMB+AMBULANCE_LIMIT)-s.SAIL)<6) s.AMB-=8;
+    s.PEDMUL = s.hasRush ? 1.8 : 1.0;
+    return s;
+  }
+  // Opposing lanes must never come closer than a car's width, whatever the
+  // taper does near the junction.
+  const LANE_MIN=CAR_W/2+3;
+  function laneOf(r){ return Math.max(LANE_MIN, widthOf[r]*0.26) }
+  // ---- Speed model ----
+  // Cars cruise on the approach, crawl through the junction, and are slowed
+  // further by how tight their turn is — a straight-through move keeps more
+  // speed than a hard right. Profiles are precomputed per route.
+  // Traffic reads as sluggish at 185 — a car took 9.2s end to end, a tenth of
+  // the whole shift. Raised ~55%; arrival rates below are raised to match, or
+  // faster cars would simply drain every queue.
+  const CRUISE=290;          // open-road speed on the approach and exit
+  const CROSS_SPEED=152;      // cap anywhere inside the intersection
+  const MIN_SPEED=114;        // floor, so the tightest turn still moves
+  const CURV_W=3;            // samples either side used to gauge the bend
+  const A_LAT=400;           // lateral grip: v = sqrt(A_LAT * turn radius)
+  const DECEL=380;           // how hard a car may brake into a slow section
+  const ACCEL=235;           // and how briskly it may pick up again
+  // ---- Scoring ----
+  // Ordinary cars were ~78% of a run's score, so the ferry, ambulance,
+  // pedestrians and flood — the systems that make this game interesting —
+  // barely moved the total. Routine traffic is now worth less per car, which
+  // lets the event systems decide runs.
+  const CAR_BASE=6;          // paid for clearing a car at all
+  const PROMPT_WINDOW=12;    // promptness bonus = this minus seconds waited
+  const PER_CAR_FLOOR=-25;   // worst a single neglected car can cost
+  // Break-even now lands at 18s, exactly FLOW_WINDOW: the moment a car stops
+  // paying is the moment it breaks your streak.
+  // Break-even lands at 33s of waiting, the same point a driver starts honking.
+  // Radius of the intersection box; cars must wait outside it.
+  const INTER_R=52;
+  // ---- Traffic density knobs ----
+  const RATE_EARLY=0.9;      // cars per second entering the map, first 25s
+  const RATE_LATE=1.20;       // ...and after that
+  const RATE_FERRY=1.9;      // ...while the ferry is emptying out
+  // Queue capacity per approach, scaled to each street's volume. A flat cap
+  // let the quiet streets stack as deep as the busy ones, which erased the
+  // difference exactly when the map got full.
+  const CAP_OF={SE:24, W:22, S:15, N:13, E:7};
+  const LEAD_IN=130;         // off-screen run-up before a car becomes visible
+  const QUEUE_DEPTH=470;    // how far back off-map a queue may stretch
+  const START_TOTAL=20;      // opening cars, dealt out by volume
+  const RAMP_AT=18;          // when opening traffic gives way to full rate
+  const FERRY_START=30;      // seconds into the shift that the boat lands
+  const FERRY_SURGE=32;      // how long it keeps disgorging cars
+  const FERRY_BURST=6;       // first wave off the ramp, all at once
+  const JAM_LIMIT=58;        // cars stopped at once before it counts as gridlock
+  const JAM_HOLD=2.0;        // ...and for this long. One bad frame is not a jam.
+  const CALM_BACKUP=26;      // worst backup allowed before the run counts as jammed
+
+  // Share of arrivals by street. Beach Rd and Beach St carry the bulk of it;
+  // Lagoon Pond Rd is the quiet one. Relative values, they need not total 100.
+  const ARRIVE_BASE ={SE:30, W:28, S:18, N:16, E:8};
+  // When the ferry unloads, Water St becomes the busiest street on the map.
+  const ARRIVE_FERRY={N:52, SE:18, W:16, S:10, E:4};
+  function weightedRoad(tbl){
+    let total=0;
+    for(const r of roads) total+=tbl[r];
+    let x=Math.random()*total;
+    for(const r of roads){ x-=tbl[r]; if(x<=0) return r }
+    return roads[roads.length-1];
+  }
+
+  // ---- Path helpers --------------------------------------------------------
+  function offsetRight(pts,dist){
+    const out=[];
+    for(let i=0;i<pts.length;i++){
+      let nx=0,ny=0;
+      if(i>0){const dx=pts[i][0]-pts[i-1][0],dy=pts[i][1]-pts[i-1][1],m=Math.hypot(dx,dy)||1;nx+=-dy/m;ny+=dx/m}
+      if(i<pts.length-1){const dx=pts[i+1][0]-pts[i][0],dy=pts[i+1][1]-pts[i][1],m=Math.hypot(dx,dy)||1;nx+=-dy/m;ny+=dx/m}
+      const m=Math.hypot(nx,ny)||1;
+      out.push([pts[i][0]+nx/m*dist, pts[i][1]+ny/m*dist]);
+    }
+    return out;
+  }
+  function smooth(pts){
+    if(pts.length<3) return 'M '+pts.map(p=>p.join(' ')).join(' L ');
+    let d='M '+pts[0][0]+' '+pts[0][1];
+    for(let i=0;i<pts.length-1;i++){
+      const p0=pts[i-1]||pts[i], p1=pts[i], p2=pts[i+1], p3=pts[i+2]||p2;
+      d+=' C '+(p1[0]+(p2[0]-p0[0])/6)+' '+(p1[1]+(p2[1]-p0[1])/6)+', '
+           +(p2[0]-(p3[0]-p1[0])/6)+' '+(p2[1]-(p3[1]-p1[1])/6)+', '
+           +p2[0]+' '+p2[1];
+    }
+    return d;
+  }
+  function add(parentId,tag,attrs){
+    const e=document.createElementNS(NS,tag);
+    for(const k in attrs) e.setAttribute(k,attrs[k]);
+    document.getElementById(parentId).appendChild(e);
+    return e;
+  }
+
+  // Pre-sample every route once. Positioning then costs an array lookup per car
+  // per frame instead of two getPointAtLength calls, which is what lets the
+  // traffic volume go up without the frame rate going down.
+  const STEP=4;
+  function sampleRoute(p,L){
+    const n=Math.ceil(L/STEP)+2, xs=new Float32Array(n), ys=new Float32Array(n);
+    for(let i=0;i<n;i++){
+      const q=p.getPointAtLength(Math.min(L,i*STEP));
+      xs[i]=q.x; ys[i]=q.y;
+    }
+    return {xs:xs,ys:ys,n:n};
+  }
+  // Handles negative d by extrapolating back along the entry heading, so a queue
+  // can stretch as far off the map as it needs to instead of piling up on the
+  // first point of the path.
+  function pointAt(s,d){
+    if(d<=0){
+      let ux=s.xs[1]-s.xs[0], uy=s.ys[1]-s.ys[0];
+      const m=Math.hypot(ux,uy)||1; ux/=m; uy/=m;
+      return {x:s.xs[0]+ux*d, y:s.ys[0]+uy*d, ux:ux, uy:uy};
+    }
+    const f=d/STEP;
+    let i=f|0; if(i>s.n-2) i=s.n-2;
+    const t=f-i;
+    let ux=s.xs[i+1]-s.xs[i], uy=s.ys[i+1]-s.ys[i];
+    const m=Math.hypot(ux,uy)||1;
+    return {x:s.xs[i]+ux*t, y:s.ys[i]+uy*t, ux:ux/m, uy:uy/m};
+  }
+
+  // ---- Build the map -------------------------------------------------------
+  const glowEl={}, routes={}, stopAt={}, dirOf={}, legPath={};
+  for(const r of roads){
+    const d=smooth(legs[r]), w=widthOf[r];
+    legPath[r]=add('routes','path',{d:d});
+    add('roadEdges','path',{d:d,'class':'edge','stroke-width':w+9});
+    add('roadFill','path',{d:d,'class':'asphalt','stroke-width':w});
+    add('roadDash','path',{d:d,'class':'dash'});
+    glowEl[r]=add('roadGlow','path',{d:d,'class':'glow','stroke-width':w});
+    const a=legs[r][legs[r].length-2];
+    const dx=a[0]-HUB[0], dy=a[1]-HUB[1], m=Math.hypot(dx,dy);
+    dirOf[r]=[dx/m,dy/m];
+  }
+  const floodPath=add('floodLayer','path',{d:smooth(legs.SE),'class':'floodwater'});
+  // Faint ring round the guard: the ALL RED target. Only drawn while a road is
+  // actually open, so it is never clutter when there is nothing to stop.
+  const stopZone=add('roadGlow','circle',{cx:HUB[0],cy:HUB[1],r:112,'class':'stopzone'});
+  const gateEl={};
+
+  // Distance from a point to a leg's centreline.
+  function distToLeg(px,py,pts){
+    let best=1e9;
+    for(let i=0;i<pts.length-1;i++){
+      const ax=pts[i][0],ay=pts[i][1],dx=pts[i+1][0]-ax,dy=pts[i+1][1]-ay;
+      const L=dx*dx+dy*dy;
+      let t=L?((px-ax)*dx+(py-ay)*dy)/L:0; t=t<0?0:t>1?1:t;
+      const d=Math.hypot(px-(ax+dx*t),py-(ay+dy*t));
+      if(d<best) best=d;
+    }
+    return best;
+  }
+  // The mouth of the intersection for a route = the first point at which it
+  // touches ANOTHER street's pavement. That is the real edge of the junction,
+  // rather than a guessed radius around the hub.
+  function insideHull(x,y){
+    let ins=false;
+    for(let i=0,j=hull.length-1;i<hull.length;j=i++){
+      const a=hull[i], b=hull[j];
+      if(((a[1]>y)!==(b[1]>y)) && x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0]) ins=!ins;
+    }
+    return ins;
+  }
+  // The mouth is where a route enters the JUNCTION, and the junction is the
+  // paved pad — not merely where two centrelines' widths overlap. Measuring
+  // against the legs alone put the stop line deep inside the paved area, so
+  // cars queued in the middle of the intersection.
+  function mouthOf(p,L,o){
+    for(let s=0;s<=L;s+=2){
+      const q=p.getPointAtLength(s);
+      if(insideHull(q.x,q.y)) return s;
+      for(const k of roads){
+        if(k===o) continue;
+        if(distToLeg(q.x,q.y,legs[k])<=widthOf[k]/2) return s;
+      }
+    }
+    return L*0.5;
+  }
+
+  // Lane offset tapers toward the hub. At full offset the inbound and outbound
+  // halves meet on opposite sides of the centreline, which put a tight S-kink
+  // on EVERY route — including straight-through ones — and pinned them all to
+  // the same speed. Tapering removes the jog and lets real turns be the thing
+  // that slows a car down.
+  // Lanes keep their full offset all the way in. The old taper pulled opposing
+  // lanes toward the centreline near the hub, which is what let them overlap.
+  function offsetLane(pts,dist){
+    const out=[];
+    for(let i=0;i<pts.length;i++){
+      let nx=0,ny=0;
+      if(i>0){const dx=pts[i][0]-pts[i-1][0],dy=pts[i][1]-pts[i-1][1],m=Math.hypot(dx,dy)||1;nx+=-dy/m;ny+=dx/m}
+      if(i<pts.length-1){const dx=pts[i+1][0]-pts[i][0],dy=pts[i+1][1]-pts[i][1],m=Math.hypot(dx,dy)||1;nx+=-dy/m;ny+=dx/m}
+      const m=Math.hypot(nx,ny)||1;
+      out.push([pts[i][0]+nx/m*dist, pts[i][1]+ny/m*dist]);
+    }
+    return out;
+  }
+  // Same curve smooth() draws, returned as dense points instead of a path string.
+  function smoothPts(pts,per){
+    const out=[pts[0].slice()];
+    for(let i=0;i<pts.length-1;i++){
+      const p0=pts[i-1]||pts[i], p1=pts[i], p2=pts[i+1], p3=pts[i+2]||p2;
+      const c1=[p1[0]+(p2[0]-p0[0])/6, p1[1]+(p2[1]-p0[1])/6];
+      const c2=[p2[0]-(p3[0]-p1[0])/6, p2[1]-(p3[1]-p1[1])/6];
+      for(let k=1;k<=per;k++){
+        const t=k/per, m=1-t;
+        out.push([m*m*m*p1[0]+3*m*m*t*c1[0]+3*m*t*t*c2[0]+t*t*t*p2[0],
+                  m*m*m*p1[1]+3*m*m*t*c1[1]+3*m*t*t*c2[1]+t*t*t*p2[1]]);
+      }
+    }
+    return out;
+  }
+  const dHub=p=>Math.hypot(p[0]-HUB[0],p[1]-HUB[1]);
+  function crossR(a,b,r){                       // where segment a->b crosses radius r
+    let lo=0,hi=1;
+    for(let k=0;k<22;k++){
+      const m=(lo+hi)/2;
+      if(dHub([a[0]+(b[0]-a[0])*m, a[1]+(b[1]-a[1])*m])>r) lo=m; else hi=m;
+    }
+    const t=(lo+hi)/2;
+    return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t];
+  }
+  function clipIn(pts,r){                       // outer->hub, keep the part outside r
+    const out=[];
+    for(let i=0;i<pts.length;i++){
+      if(dHub(pts[i])>r) out.push(pts[i]);
+      else{ if(out.length) out.push(crossR(out[out.length-1],pts[i],r)); break }
+    }
+    return out.length?out:[pts[0]];
+  }
+  function clipOut(pts,r){                      // hub->outer, keep the part outside r
+    for(let i=0;i<pts.length;i++){
+      if(dHub(pts[i])>r){
+        const rest=pts.slice(i);
+        if(i>0) rest.unshift(crossR(pts[i-1],pts[i],r));
+        return rest;
+      }
+    }
+    return pts.slice();
+  }
+  const unit=(a,b)=>{const dx=b[0]-a[0],dy=b[1]-a[1],m=Math.hypot(dx,dy)||1;return [dx/m,dy/m]};
+  // A tangent-continuous cubic from the inbound heading to the outbound heading.
+  // This is the turn itself: it enters and leaves along the two lanes, so a car
+  // sweeps across the junction once instead of curling around it.
+  // Points strictly between P and Q on the circular arc leaving P along T.
+  function arcSample(P,T,Q,steps){
+    const Mx=Q[0]-P[0], My=Q[1]-P[1];
+    const nx=-T[1], ny=T[0];
+    const den=2*(Mx*nx+My*ny), out=[];
+    if(Math.abs(den)<1e-6){                        // straight
+      for(let i=1;i<steps;i++){const t=i/steps; out.push([P[0]+Mx*t,P[1]+My*t])}
+      return out;
+    }
+    const r=(Mx*Mx+My*My)/den;
+    const C=[P[0]+nx*r, P[1]+ny*r], Rr=Math.hypot(P[0]-C[0],P[1]-C[1]);
+    const a0=Math.atan2(P[1]-C[1],P[0]-C[0]), a1=Math.atan2(Q[1]-C[1],Q[0]-C[0]);
+    const cross=(P[0]-C[0])*T[1]-(P[1]-C[1])*T[0];
+    let da=a1-a0;
+    if(cross>0){ while(da<0)da+=2*Math.PI; while(da>2*Math.PI)da-=2*Math.PI }
+    else       { while(da>0)da-=2*Math.PI; while(da<-2*Math.PI)da+=2*Math.PI }
+    for(let i=1;i<steps;i++){
+      const a=a0+da*(i/steps);
+      out.push([C[0]+Math.cos(a)*Rr, C[1]+Math.sin(a)*Rr]);
+    }
+    return out;
+  }
+  // Two circular arcs meeting tangentially. Each arc sweeps one way, so the
+  // turn can never curl back on itself — a spline through the same endpoints
+  // takes the long way round on hairpins like Beach Rd into Beach St Ext.
+  function turnArc(p0,t0,p1,t1,n){
+    const Vx=p1[0]-p0[0], Vy=p1[1]-p0[1];
+    const dot=t0[0]*t1[0]+t0[1]*t1[1];
+    const a=2-2*dot, b=2*(Vx*(t0[0]+t1[0])+Vy*(t0[1]+t1[1])), c=-(Vx*Vx+Vy*Vy);
+    let d;
+    if(Math.abs(a)<1e-6){
+      const dv=Vx*t1[0]+Vy*t1[1];
+      d=Math.abs(dv)<1e-6?Math.hypot(Vx,Vy)/2:(Vx*Vx+Vy*Vy)/(4*dv);
+    }else{
+      d=(-b+Math.sqrt(Math.max(0,b*b-4*a*c)))/(2*a);
+    }
+    if(!(d>0)) d=Math.hypot(Vx,Vy)/2;
+    const A=[p0[0]+t0[0]*d, p0[1]+t0[1]*d], B=[p1[0]-t1[0]*d, p1[1]-t1[1]*d];
+    const J=[(A[0]+B[0])/2, (A[1]+B[1])/2];
+    let jx=B[0]-A[0], jy=B[1]-A[1];
+    const jm=Math.hypot(jx,jy);
+    const tJ = jm<1e-6 ? [t1[0],t1[1]] : [jx/jm, jy/jm];
+    const h=Math.max(2,Math.floor(n/2));
+    return arcSample(p0,t0,J,h).concat([J], arcSample(J,tJ,p1,n-h));
+  }
+  const poly=pts=>'M '+pts[0][0]+' '+pts[0][1]+pts.slice(1).map(p=>' L '+p[0]+' '+p[1]).join('');
+  const JUNC_R=52;                              // where the turn blend begins
+  const JUNC_MAX=92;                           // ...backed out this far for sharp pairs
+  const TURN_CHORD=38;                          // room a turn needs between its ends
+  const JUNC_EXIT=46;                           // how far past the box a crossing still counts
+  const PAD_R=92;                               // reach of the paved junction area
+  const STOP_SETBACK=14;                        // clear air between the nose and the pad
+
+  // The junction itself is paved between the legs — five strokes alone leave
+  // bare corners that turning cars would appear to drive across. Build that
+  // area as the convex hull of the legs' pavement edges at PAD_R.
+  const hullPts=[];
+  for(const r of roads){
+    const pts=legs[r], w=widthOf[r]/2;
+    let a=null,b=null,acc=0;
+    for(let i=pts.length-1;i>0;i--){
+      const L=Math.hypot(pts[i-1][0]-pts[i][0],pts[i-1][1]-pts[i][1]);
+      if(acc+L>=PAD_R){
+        const t=(PAD_R-acc)/L;
+        a=[pts[i][0]+(pts[i-1][0]-pts[i][0])*t, pts[i][1]+(pts[i-1][1]-pts[i][1])*t];
+        b=[pts[i][0],pts[i][1]]; break;
+      }
+      acc+=L;
+    }
+    if(!a){ a=pts[0].slice(); b=pts[1].slice() }
+    const dx=a[0]-b[0], dy=a[1]-b[1], m=Math.hypot(dx,dy)||1;
+    hullPts.push([a[0]-dy/m*w, a[1]+dx/m*w], [a[0]+dy/m*w, a[1]-dx/m*w]);
+  }
+  // A true convex hull. Sorting by bearing leaves a notch where two legs are
+  // close together (Beach Rd and Beach St Ext.), which is exactly the corner a
+  // turning car crosses.
+  hullPts.sort((p,q)=>p[0]-q[0]||p[1]-q[1]);
+  const cross2=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);
+  const lower=[], upper=[];
+  for(const p of hullPts){
+    while(lower.length>1 && cross2(lower[lower.length-2],lower[lower.length-1],p)<=0) lower.pop();
+    lower.push(p);
+  }
+  for(let i=hullPts.length-1;i>=0;i--){
+    const p=hullPts[i];
+    while(upper.length>1 && cross2(upper[upper.length-2],upper[upper.length-1],p)<=0) upper.pop();
+    upper.push(p);
+  }
+  lower.pop(); upper.pop();
+  const hull=lower.concat(upper);
+  const padD=poly(hull)+' Z';
+  add('roadEdges','path',{d:padD,fill:'var(--edge)',stroke:'var(--edge)','stroke-width':9,'stroke-linejoin':'round'});
+  add('roadFill','path',{d:padD,fill:'var(--road)',stroke:'var(--road)','stroke-width':1,'stroke-linejoin':'round'});
+
+  // One route per origin->destination pair (5 origins x 4 exits).
+  for(const o of roads){
+    routes[o]={};
+    const inFull=smoothPts(offsetLane(legs[o],laneOf(o)),10);
+    let firstRoute=true;
+    for(const ex of roads){
+      if(ex===o) continue;
+      const outFull=smoothPts(offsetLane(legs[ex].slice().reverse(),laneOf(ex)),10);
+      // Where two legs meet at a shallow angle (Beach Rd and Beach St Ext. are
+      // only ~37 deg apart) the lane offsets push the entry and exit points on
+      // top of each other, and the car has to pivot in place. Back the blend
+      // out until there is room for a real turn.
+      let inb=null, outb=null;
+      for(let r=JUNC_R; r<=JUNC_MAX; r+=6){
+        inb=clipIn(inFull,r); outb=clipOut(outFull,r);
+        const u=inb[inb.length-1], v=outb[0];
+        if(Math.hypot(v[0]-u[0],v[1]-u[1])>=TURN_CHORD) break;
+      }
+      const a=inb[inb.length-1], b=outb[0];
+      const tIn=unit(inb[inb.length-2]||a,a), tOut=unit(b,outb[1]||b);
+      const p=add('routes','path',{d:poly(inb.concat(turnArc(a,tIn,b,tOut,26),outb))});
+      const L=p.getTotalLength();
+      const mouth=mouthOf(p,L,o);
+      // outStart is anchored to a circle round the hub, so progress along a
+      // shared outbound street is comparable across routes from any origin.
+      let leave=mouth;
+      for(let s=0;s<=L;s+=3){
+        const q=p.getPointAtLength(s);
+        if(Math.hypot(q.x-HUB[0],q.y-HUB[1])<=INTER_R) leave=s;
+      }
+      // Nose sits exactly on the mouth, so the car waits at the junction edge.
+      const stopD=Math.max(0,mouth-CAR_L*0.5-STOP_SETBACK), samp=sampleRoute(p,L);
+      routes[o][ex]={path:p,len:L,stop:stopD,outStart:leave,samp:samp,
+                     lim:speedProfile(samp,stopD,leave)};
+      if(firstRoute){
+        firstRoute=false;
+        stopAt[o]=routes[o][ex].stop;
+        const a=p.getPointAtLength(mouth), b=p.getPointAtLength(Math.min(L,mouth+6));
+        const tx=b.x-a.x, ty=b.y-a.y, tm=Math.hypot(tx,ty)||1;
+        const nx=-ty/tm, ny=tx/tm, half=widthOf[o]*0.25;
+        add('stopBars','line',{x1:a.x-nx*half,y1:a.y-ny*half,x2:a.x+nx*half,y2:a.y+ny*half,'class':'stopbar'});
+      }
+    }
+  }
+  // ---- Scenery ------------------------------------------------------------
+  // Not a reproduction of the illustration — that is hand-drawn artwork — but
+  // the same design language: cream sidewalks, clapboard blocks with slate
+  // roofs crowding the street edges, sage planting, the harbour off Water St,
+  // and a soft ink line on everything so the cars read as the brightest thing.
+  let sd=98765;
+  const srnd=()=>{ sd=(sd*1103515245+12345)&0x7fffffff; return sd/0x7fffffff };
+  const sr=(a,b)=>a+srnd()*(b-a);
+  const sc=(g,t,a)=>add(g,t,a);
+
+  // Harbour, top right, with the pier and ferry as in the mockup.
+  sc('scenery','path',{d:'M 1000 0 L 1000 300 Q 830 262 762 150 Q 720 74 700 0 Z',fill:'var(--water)'});
+  sc('scenery','path',{d:'M 1000 0 L 1000 300 Q 830 262 762 150 Q 720 74 700 0 Z',
+     fill:'none',stroke:'var(--ink)','stroke-width':2.4,opacity:.5});
+  for(let i=0;i<5;i++){
+    const y=40+i*46;
+    sc('scenery','path',{d:'M '+(1000-(150+srnd()*120))+' '+y+' q 60 -7 130 0',
+       fill:'none',stroke:'#ffffff',opacity:.22,'stroke-width':2});
+  }
+  sc('scenery','rect',{x:812,y:150,width:150,height:11,rx:3,fill:'var(--edge)',stroke:'var(--ink)','stroke-width':1.6});
+  sc('scenery','g',{}).innerHTML='';
+  // ferry hull
+  sc('scenery','path',{d:'M 872 84 h 96 l -12 26 h -84 z',fill:'var(--wall)',stroke:'var(--ink)','stroke-width':2});
+  sc('scenery','rect',{x:886,y:64,width:64,height:20,rx:3,fill:'var(--wall)',stroke:'var(--ink)','stroke-width':1.8});
+  // sailboats
+  for(const [x,y,s] of [[770,62,1],[832,26,.8],[930,28,.9]]){
+    sc('scenery','path',{d:'M '+x+' '+y+' l 0 '+(-26*s)+' l '+(15*s)+' '+(26*s)+' z',
+       fill:'var(--wall)',stroke:'var(--ink)','stroke-width':1.6});
+  }
+
+  // Green space: the churchyard lawn and the bandstand park.
+  for(const [cx,cy,rx,ry] of [[250,150,190,120],[690,300,140,90],[210,760,180,130],[760,760,150,110]]){
+    sc('scenery','ellipse',{cx:cx,cy:cy,rx:rx,ry:ry,fill:'var(--grass)',opacity:.9});
+  }
+
+  // Buildings set back from the kerb, following each street.
+  // Light falls from the upper left throughout, so every object casts toward
+  // the lower right. A flat plan rectangle reads as a map; a roof plane plus a
+  // visible facade plus a shadow reads as a building.
+  const LIGHT=[0.72,0.70];        // shadow direction, normalised-ish
+  function block(x,y,w,h,rot,storeys){
+    const lift=(storeys||1)*7.5;                    // apparent height
+    const g=sc('scenery','g',{transform:'translate('+x+' '+y+') rotate('+rot+')'});
+    const put=(tag,at)=>{const e=document.createElementNS(NS,tag);
+      for(const k in at) e.setAttribute(k,at[k]); g.appendChild(e); return e};
+    const hw=w/2, hh=h/2;
+    const sx=LIGHT[0]*lift, sy=LIGHT[1]*lift;
+    // cast shadow on the ground
+    put('path',{d:'M '+(-hw+sx)+' '+(-hh+sy)+' L '+(hw+sx)+' '+(-hh+sy)+
+                  ' L '+(hw+sx)+' '+(hh+sy)+' L '+(-hw+sx)+' '+(hh+sy)+' Z',
+                fill:'#2f2b23',opacity:.22});
+    // facade: the wall you can see, extruded toward the light-away side
+    const wall=srnd()<.5?'var(--wall)':'var(--wall2)';
+    put('path',{d:'M '+(-hw)+' '+hh+' L '+hw+' '+hh+' L '+(hw+sx*0.55)+' '+(hh+sy*0.55)+
+                  ' L '+(-hw+sx*0.55)+' '+(hh+sy*0.55)+' Z',
+                fill:'#cbbfa4',stroke:'var(--ink)','stroke-width':sr(1.3,1.9)});
+    put('path',{d:'M '+hw+' '+(-hh)+' L '+(hw+sx*0.55)+' '+(-hh+sy*0.55)+
+                  ' L '+(hw+sx*0.55)+' '+(hh+sy*0.55)+' L '+hw+' '+hh+' Z',
+                fill:'#bdb096',stroke:'var(--ink)','stroke-width':sr(1.3,1.9)});
+    // body and roof plane
+    put('rect',{x:-hw,y:-hh,width:w,height:h,rx:2,fill:wall,
+                stroke:'var(--ink)','stroke-width':sr(1.6,2.5)});
+    put('rect',{x:-hw,y:-hh,width:w,height:h*0.46,rx:2,fill:'var(--roof)',
+                stroke:'var(--ink)','stroke-width':sr(1.2,1.9)});
+    // ridge line
+    put('line',{x1:-hw+2,y1:-hh+h*0.46,x2:hw-2,y2:-hh+h*0.46,
+                stroke:'var(--ink)','stroke-width':1.1,opacity:.55});
+    // a striped awning now and then, as in the mockup
+    if(srnd()<0.34){
+      const aw=w*0.52;
+      put('rect',{x:-aw/2,y:hh-3,width:aw,height:6,rx:1.5,
+                  fill:srnd()<.5?'#5b87a8':'#c9503f',stroke:'var(--ink)','stroke-width':1.2});
+    }
+    return g;
+  }
+
+  function offRoad(r,dist,side,back){
+    const pts=legs[r]; let acc=0;
+    for(let i=pts.length-1;i>0;i--){
+      const ax=pts[i][0],ay=pts[i][1],bx=pts[i-1][0],by=pts[i-1][1];
+      const L=Math.hypot(bx-ax,by-ay);
+      if(acc+L>=dist){
+        const t=(dist-acc)/L, ux=(bx-ax)/L, uy=(by-ay)/L;
+        const px=ax+(bx-ax)*t, py=ay+(by-ay)*t;
+        const off=widthOf[r]/2+back;
+        return {x:px-uy*off*side, y:py+ux*off*side, ang:Math.atan2(uy,ux)*180/Math.PI};
+      }
+      acc+=L;
+    }
+    return null;
+  }
+  // Hand-placed landmarks first — ten specific buildings read as a town far
+  // better than forty random boxes, which is what this was before.
+  for(const L of [
+    [150,470,96,58,  4, 2],   // shopfront row, Beach St west
+    [268,556,74,50,  2, 1],
+    [352,706,84,56, -6, 2],   // the corner block south of the junction
+    [214,832,70,46,  8, 1],
+    [672,556,88,58,-14, 2],   // Beach Rd, southeast side
+    [792,660,76,50,-16, 1],
+    [880,470,84,54,  2, 2],   // Beach St Ext. shops
+    [742,412,66,44, -4, 1],
+    [560,196,72,48, -8, 2],   // Water St, harbour end
+    [430,262,64,42,  6, 1]
+  ]) block(L[0],L[1],L[2],L[3],L[4],L[5]);
+
+  // Then a light random infill further out, so the edges do not read as empty.
+  for(const r of roads){
+    for(let dist=300; dist<620; dist+=sr(96,150)){
+      for(const side of [-1,1]){
+        if(srnd()<0.45) continue;
+        const p=offRoad(r,dist,side,sr(40,60));
+        if(!p) continue;
+        if(p.x<-20||p.x>1020||p.y<-20||p.y>1020) continue;
+        block(p.x,p.y,sr(44,72),sr(32,48),p.ang,srnd()<.3?2:1);
+      }
+    }
+  }
+  // Church spire, top left, the mockup's landmark.
+  sc('scenery','ellipse',{cx:262,cy:238,rx:52,ry:32,fill:'#2f2b23',opacity:.20});
+  const ch=sc('scenery','g',{transform:'translate(232 210)'});
+  for(const a of [['rect',{x:-34,y:-26,width:68,height:56,rx:2,fill:'var(--wall)',stroke:'var(--ink)','stroke-width':2.2}],
+                  ['path',{d:'M -14 -26 l 0 -46 l 14 -30 l 14 30 l 0 46 z',fill:'var(--wall)',stroke:'var(--ink)','stroke-width':2}],
+                  ['path',{d:'M -14 -72 l 14 -30 l 14 30 z',fill:'var(--roof)',stroke:'var(--ink)','stroke-width':1.6}]]){
+    const e=document.createElementNS(NS,a[0]); for(const k in a[1]) e.setAttribute(k,a[1][k]); ch.appendChild(e);
+  }
+  // Trees.
+  for(let i=0;i<52;i++){
+    const x=sr(10,990), y=sr(10,990);
+    if(kerbClear(x,y)<26) continue;
+    const rr2=sr(9,17);
+    sc('scenery','ellipse',{cx:x+rr2*0.55,cy:y+rr2*0.5,rx:rr2*0.95,ry:rr2*0.7,fill:'#2f2b23',opacity:.20});
+    sc('scenery','circle',{cx:x,cy:y,r:rr2,fill:'#6f8150',stroke:'var(--ink)','stroke-width':sr(1.1,1.8)});
+    sc('scenery','circle',{cx:x-rr2*0.28,cy:y-rr2*0.30,r:rr2*0.62,fill:'#8b9c66',opacity:.9});
+    sc('scenery','circle',{cx:x-rr2*0.42,cy:y-rr2*0.45,r:rr2*0.30,fill:'#a3b179',opacity:.75});
+  }
+  function kerbClear(x,y){
+    let best=1e9;
+    for(const k of roads){ const d=distToLeg(x,y,legs[k])-widthOf[k]/2; if(d<best) best=d }
+    return best;
+  }
+
+  // Cream sidewalks flanking every street, as in the mockup.
+  for(const r of roads){
+    const d=smooth(legs[r]);
+    sc('sidewalks','path',{d:d,fill:'none',stroke:'var(--edge)','stroke-linecap':'round',
+       'stroke-width':widthOf[r]+30});
+    sc('sidewalks','path',{d:d,fill:'none',stroke:'var(--ink)','stroke-linecap':'round',
+       'stroke-width':widthOf[r]+32,opacity:.22});
+  }
+  sc('sidewalks','path',{d:padD,fill:'var(--edge)',stroke:'var(--edge)','stroke-width':30,'stroke-linejoin':'round'});
+
+  // Zebra crossings on the stop bars — the crosswalk the guard is protecting.
+  for(const r of roads){
+    const rt=routes[r][Object.keys(routes[r])[0]];
+    const a=rt.path.getPointAtLength(rt.stop+CAR_L*0.5);
+    const b=rt.path.getPointAtLength(rt.stop+CAR_L*0.5+8);
+    const tx=b.x-a.x, ty=b.y-a.y, m=Math.hypot(tx,ty)||1;
+    const ux=tx/m, uy=ty/m, nx=-uy, ny=ux;
+    const half=widthOf[r]/2+4, bars=7;
+    for(let i=0;i<bars;i++){
+      const f=(i/(bars-1)-0.5)*2*half;
+      sc('crosswalks','line',{x1:a.x+nx*f-ux*9, y1:a.y+ny*f-uy*9,
+                              x2:a.x+nx*f+ux*9, y2:a.y+ny*f+uy*9,
+                              stroke:'#f6f2e4','stroke-width':4.5,'stroke-linecap':'butt',opacity:.9});
+    }
+  }
+
+  // Centre island with its lamp, the visual anchor of the mockup.
+  sc('island','circle',{cx:HUB[0],cy:HUB[1],r:26,fill:'var(--edge)',stroke:'var(--ink)','stroke-width':2.2});
+  sc('island','circle',{cx:HUB[0],cy:HUB[1],r:19,fill:'var(--grass)',opacity:.95});
+  sc('island','rect',{x:HUB[0]-2,y:HUB[1]-30,width:4,height:32,fill:'#3a3a38',stroke:'var(--ink)','stroke-width':1.2});
+  sc('island','circle',{cx:HUB[0],cy:HUB[1]-33,r:6,fill:'#ffe9a8',stroke:'var(--ink)','stroke-width':1.6});
+
+  // Cars used to spawn at the very start of their path, which on a phone sits
+  // far outside the visible crop — up to 490 units of travel before appearing,
+  // plus another 1400 if the queue was deep. They now enter just off the edge
+  // of the narrowest crop we expect, so traffic arrives promptly on any screen.
+  const spawnBase={};
+  {
+    const VW=360, VH=760;                       // deliberately narrow/tall phone
+    const k=Math.max(VW/1000,VH/1000);
+    const vx0=500-VW/(2*k), vx1=500+VW/(2*k), vy0=500-VH/(2*k), vy1=500+VH/(2*k);
+    for(const o of roads){
+      const rt=routes[o][Object.keys(routes[o])[0]];
+      let vis=0;
+      for(let s=0;s<=rt.stop;s+=4){
+        const q=rt.path.getPointAtLength(s);
+        if(q.x>vx0&&q.x<vx1&&q.y>vy0&&q.y<vy1){ vis=s; break }
+      }
+      spawnBase[o]=Math.max(0, Math.min(rt.stop-140, vis-LEAD_IN));
+    }
+  }
+
+  // Massachusetts law: traffic yields to pedestrians in a crosswalk. A crosswalk
+  // spans the whole road, so it stops cars LEAVING on that street as well as
+  // cars waiting to enter it. Work out, for every route, the point at which it
+  // passes over its exit road's crosswalk.
+  const crossRadius={};
+  for(const r of roads){
+    const rt=routes[r][Object.keys(routes[r])[0]];
+    const q=rt.path.getPointAtLength(rt.stop+CAR_L*0.5);
+    crossRadius[r]=Math.hypot(q.x-HUB[0],q.y-HUB[1]);
+  }
+  for(const o of roads) for(const ex of Object.keys(routes[o])){
+    const rt=routes[o][ex];
+    let at=null;
+    for(let s=rt.outStart;s<=rt.len;s+=3){
+      const q=rt.path.getPointAtLength(s);
+      if(Math.hypot(q.x-HUB[0],q.y-HUB[1])>=crossRadius[ex]){ at=s; break }
+    }
+    // Hold the nose short of the crossing, not on top of it.
+    rt.pedExit = at===null ? Infinity : Math.max(rt.outStart, at-CAR_L*0.5-6);
+  }
+
+  // Anchor point for each label, in map coordinates.
+  // With the name labels gone, messages refer to each approach by its actual
+  // bearing from the junction rather than by street name.
+  const dirName={};
+  {
+    const words=['east','southeast','south','southwest','west','northwest','north','northeast'];
+    for(const r of roads){
+      const far=legs[r][0];
+      const a=(Math.atan2(far[1]-HUB[1],far[0]-HUB[0])*180/Math.PI+360)%360;
+      dirName[r]='the '+words[Math.round(a/45)%8]+' road';
+    }
+  }
+  const Cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+
+  // Per-road pills (mood face + queue count + ferry count, five of them, all
+  // updating every frame) are gone. Five little dashboards ringing the junction
+  // was more to read than the junction itself.
+  const SHOW_PILLS=false;
+  const labelHost=document.getElementById('roadLabels'), labelEl={}, labelPt={}, countEl={}, boatCountEl={};
+  for(const r of roads){
+    const p=legPath[r], q=p.getPointAtLength(Math.max(0,p.getTotalLength()-labelAt[r]));
+    labelPt[r]=[q.x+labelNudge[r][0], q.y+labelNudge[r][1]];
+    const el=document.createElement('div');
+    el.className='rlbl';
+    // Street names removed — the pill now carries only the queue count, the
+    // ferry count and the pressure colour.
+    const cnt=document.createElement('span'); cnt.className='cnt'; cnt.textContent='0';
+    const bc=document.createElement('span'); bc.className='boatcnt none';
+    el.appendChild(cnt); el.appendChild(bc);
+    countEl[r]=cnt; boatCountEl[r]=bc;
+    labelHost.appendChild(el); labelEl[r]=el;
+  }
+  function layoutLabels(){
+    if(!SHOW_PILLS) return;
+    const box=document.getElementById('world').getBoundingClientRect();
+    const ctm=svg.getScreenCTM(); if(!ctm||!box.width) return;
+    const pt=svg.createSVGPoint();
+    for(const r of roads){
+      pt.x=labelPt[r][0]; pt.y=labelPt[r][1];
+      const s=pt.matrixTransform(ctm);
+      const el=labelEl[r], EDGE=12, hw=el.offsetWidth/2+EDGE, hh=el.offsetHeight/2+EDGE;
+      let x=s.x-box.left, y=s.y-box.top;
+      // Clamp so a label near the cropped edge slides inward instead of vanishing.
+      x=Math.max(hw,Math.min(box.width-hw,x));
+      y=Math.max(hh,Math.min(box.height-hh,y));
+      el.style.left=x+'px'; el.style.top=y+'px';
+    }
+  }
+  // Pressure gates: one bar per approach, drawn across the road near the edge of
+  // the visible crop. Queue length is the thing this game is about, and a badly
+  // backed-up street runs off the screen — so the read has to be a proxy.
+  for(const r of roads){
+    const p=legPath[r], L=p.getTotalLength();
+    const a=p.getPointAtLength(Math.max(0,L-labelAt[r]));
+    const b=p.getPointAtLength(Math.max(0,L-labelAt[r]+8));
+    const tx=b.x-a.x, ty=b.y-a.y, m=Math.hypot(tx,ty)||1;
+    const nx=-ty/m, ny=tx/m, half=widthOf[r]*0.46;
+    gateEl[r]=add('roadGlow','line',{x1:a.x-nx*half,y1:a.y-ny*half,
+                                     x2:a.x+nx*half,y2:a.y+ny*half,'class':'gate'});
+  }
+  layoutLabels();
+  requestAnimationFrame(layoutLabels);
+  window.addEventListener('resize',layoutLabels);
+  window.addEventListener('orientationchange',()=>setTimeout(layoutLabels,250));
+  if(window.visualViewport) window.visualViewport.addEventListener('resize',layoutLabels);
+
+  // ---- Game state ----------------------------------------------------------
+  const scoreEl=document.getElementById('score'), temperText=document.getElementById('temperText'), temperFill=document.getElementById('temperFill');
+  const temperPlaque=document.getElementById('temperPlaque');
+  const clock=document.getElementById('clock'), statusEl=document.getElementById('status'), tip=document.getElementById('tip');
+  const ferryMsg=document.getElementById('ferryMsg'), carLayer=document.getElementById('carLayer');
+  const pedEl=document.getElementById('ped'), strikeEl=document.getElementById('strikes');
+  const subEl=document.getElementById('sub'), shiftSubEl=document.getElementById('shiftSub'), boatEl=document.getElementById('boatHud');
+  const guardEl=document.getElementById('crossingGuard');
+  const SIM_DT=1/60, MAX_STEPS=6;   // sub-step budget per rendered frame
+  const EMPTY=[];
+  let acc=0, hudTick=0;
+  // ---- Green light life ----
+  const GREEN_LIFE=3.6;        // seconds a wave-through lasts before it lapses
+  const GREEN_WARN=1.1;        // when the glow starts flashing
+  let greenT=0;
+  const FLOW_IDLE=2.6;         // seconds without a clear before the streak bleeds
+  let sinceClear=0;
+  const BURST_EVERY=[7,15];    // seconds between platoons
+  let burstT=9;
+  const TRUCK_SHARE=0.11, TRUCK_SPEED=0.78, TRUCK_LEN=1.5;  // the island bus / box vans
+  // ---- Wave-through: the risk lever ----
+  // Double-tapping the live street pushes it faster for more points, at a real
+  // collision risk. Good players never crashed before; now they can choose to.
+  // The double-tap "wave through" is gone. It bought speed for collision risk,
+  // but it made a re-tap of the live road ambiguous — renew the green, or take
+  // the gamble? — and a game with one verb should have one verb.
+  let lastTap=0;
+  const HUD_EVERY=6;         // refresh the chips ~10x a second, not 60
+  let active=null, cars=[], running=false, startTime=0, last=0, score=0, moved=0, sourCars=0, meltdowns=0, horns=0, ferryTriggered=false, sailed=false, newRecord=false, nearMisses=0, blockedT=0, wreckCars=[], pedT=0, pedNext=6, pedRoad=null, pedWaitingRoad=null, pedWait=0, pedPenalty=false, pedBase=null, pedPerp=null, pedHits=0, pedCrossed=0, pedPoints=0, happyPeds=0, boatTotal=0, boatMade=0, boatMissed=0, strikes=0, crashed=false, crashPair=null, spawnAcc=0;
+  const DURATION=90;
+  const FLOW_WINDOW=18;       // a promptly cleared car keeps the streak alive
+  const FLOW_STEP=4;          // every four clean clears raises the multiplier
+  const FLOW_MAX=4;
+  const FLOW_MOMENTS={2:'FLOW x2',3:'FLOW x3',4:'FLOW x4!'};
+  const CLEAR_BONUS=110;
+  const FERRY_RUSH_TARGET=34, FERRY_RUSH_SECS=20, FERRY_RUSH_BONUS=1100;
+  // Ambulance and high water used to hand out flat four-figure sums of their
+  // own. They now pay in FLOW, which the player is already watching, so the
+  // reward compounds through everything else instead of being a separate pot.
+  const AMBULANCE_AT=44, AMBULANCE_LIMIT=13, EVENT_FLOW=6;
+  // Sprint 5 high water: rain builds into three progressively slower Beach Road stages.
+  // Weather now begins in the flat opening third and escalates gradually,
+  // instead of stacking three stages into the closing 30 seconds.
+  const RAIN_AT=14, FLOOD_AT=34, HIGH_WATER_AT=52, DEEP_WATER_AT=78;
+  const FLOOD_SPEED=[1,.90,.76,.62];
+  const FLOOD_TARGET=24;
+  // Calibrated against simulated PLAYERS, not an optimal bot. Measured medians:
+  // first-timer ~7k, casual ~21k, practised ~22k, expert using the risk lever
+  // ~27k. The old bar (18/23/27k) gave a first-timer nothing and everyone from
+  // casual to practised exactly one star.
+  const STAR_THRESHOLDS=[5000,9000,14000,20000,27000];   // per shift, five tiers
+  const MAX_STARS=STAR_THRESHOLDS.length;
+  // The day carries. Midday opens with the Morning total already banked, so a
+  // campaign is one growing number instead of three unrelated ones. A failed
+  // shift restarts from whatever was banked BEFORE it, never from the wreck.
+  let carry=0, startedWith=0;
+  let jamT=0, peakQueued=0;
+  let flow=0,maxFlow=0,flowMult=1,lastFlowMult=1,intersectionWasBusy=false,clearSweeps=0;
+  let ferryRushCleared=0,ferryRushDone=false,ferryWarnShown=-1;
+  let ambulanceTriggered=false,ambulanceResolved=false,ambulanceCar=null,ambulanceDeadline=0;
+  let floodStage=0,floodCleared=0,floodBonusDone=false,lastFloodStage=0,rainAnnounced=false;
+  const weatherHud=document.getElementById('weatherHud'), rainOverlay=document.getElementById('rainOverlay');
+  // The four status chips were removed from the footer. Their handles resolve
+  // to null now, so everything that touched them is guarded.
+  const chipFlow=null, flowBadge=null;
+  const chipWeather=null, chipWeatherLabel=null, weatherBadge=null;
+  const chipBoat=null, boatBadge=null;
+  const chipPed=null, pedBadge=null;
+  const temperFace=document.getElementById('temperFace');
+  const eventBanner=document.getElementById('eventBanner');
+  const momentEl=document.getElementById('moment'), flowCall=document.getElementById('flowCall'), coachEl=document.getElementById('coach');
+  const PLAY_KEY='fiveCorners.plays.v1';
+  let lifetimePlays=0; try{ lifetimePlays=Number(localStorage.getItem(PLAY_KEY)||0) }catch(e){}
+  let coached={road:false,ferry:false,ped:false,weather:false,ambulance:false,flow:false};
+
+  function successSound(level){
+    if(!actx||muted) return;
+    if(actx.state!=='running' && actx.resume) actx.resume().catch(function(){});
+    const now=actx.currentTime, notes=level>=3?[660,880,1100]:level===2?[620,820]:[700,930];
+    notes.forEach(function(freq,i){
+      const t=now+i*.075, o=actx.createOscillator(), g=actx.createGain();
+      o.type='sine'; o.frequency.value=freq;
+      g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.075,t+.012); g.gain.exponentialRampToValueAtTime(.0001,t+.18);
+      o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t+.19);
+    });
+  }
+  function moment(title,sub,ms=1200,danger=false,level=1,teach=false){
+    if(!momentEl) return;
+    momentEl.innerHTML=title+(sub?'<small>'+sub+'</small>':'');
+    momentEl.classList.toggle('danger',!!danger);
+    momentEl.classList.toggle('teach',!!teach);
+    momentEl.classList.add('show');
+    if(coachEl) coachEl.classList.remove('show');   // they share the bottom slot
+    clearTimeout(moment.t); moment.t=setTimeout(()=>momentEl.classList.remove('show'),ms);
+    if(!danger) successSound(level);
+    if(navigator.vibrate) navigator.vibrate(danger?[25,35,25]:(level>=3?[12,35,12,35,18]:[10,35,10]));
+  }
+  function flowToast(text){ sweepToast(text) }
+  const sweepNote=document.getElementById('sweepNote');
+  function sweepToast(text){
+    if(!sweepNote) return;
+    sweepNote.textContent=text; sweepNote.classList.add('show');
+    clearTimeout(sweepToast.t); sweepToast.t=setTimeout(function(){sweepNote.classList.remove('show')},1200);
+  }
+  function coach(text,ms=2200){
+    if(lifetimePlays>2 || !coachEl) return;
+    coachEl.innerHTML=text; coachEl.classList.add('show'); clearTimeout(coach.t); coach.t=setTimeout(()=>coachEl.classList.remove('show'),ms);
+  }
+
+  function showEvent(text,ms=1300,danger=false){
+    eventBanner.textContent=text; eventBanner.classList.toggle('danger',!!danger); eventBanner.classList.add('show');
+    clearTimeout(showEvent.t); showEvent.t=setTimeout(()=>eventBanner.classList.remove('show'),ms);
+  }
+  function setFlow(next){
+    flow=Math.max(0,next); maxFlow=Math.max(maxFlow,flow);
+    const prevMult=flowMult;
+    flowMult=Math.min(FLOW_MAX,1+Math.floor(flow/FLOW_STEP));
+    if(flowMult>prevMult){
+      flowToast('🔥 '+FLOW_MOMENTS[flowMult]+' · SCORES x'+flowMult);
+      successSound(flowMult-1);
+      if(!coached.flow){ coached.flow=true; coach('<b>FLOW!</b> Clear cars promptly to build a scoring multiplier.',1900); }
+    }
+    lastFlowMult=flowMult;
+    // The old comboHud strip was replaced by the FLOW chip in the footer.
+    if(flowBadge){
+      flowBadge.textContent=flowMult;
+      flowBadge.classList.toggle('warn',flowMult===1);
+    }
+    if(chipFlow){
+      chipFlow.classList.toggle('on',flowMult>1);
+      chipFlow.classList.remove('hot'); void chipFlow.offsetWidth;
+      if(flowMult>1) chipFlow.classList.add('hot');
+    }
+  }
+  function breakFlow(reason){
+    if(flow>=FLOW_STEP && reason) showEvent(reason+' — FLOW LOST',900,true);
+    setFlow(0);
+  }
+
+  function makeCarEl(boat,ambulance,truck){
+    const g=document.createElementNS(NS,'g');
+    g.setAttribute('class','car'+(boat?' boat':'')+(ambulance?' ambulance':'')+(truck?' truck':''));
+    const bw=CAR_W*(truck?1.12:1), bl=CAR_L*(truck?TRUCK_LEN:1);
+    const body=document.createElementNS(NS,'rect');
+    body.setAttribute('class','body');
+    body.setAttribute('x',-bw/2); body.setAttribute('y',-bl/2);
+    body.setAttribute('width',bw); body.setAttribute('height',bl); body.setAttribute('rx',truck?3:5);
+    body.setAttribute('fill',boat?BOAT_COLOR:colors[Math.floor(Math.random()*colors.length)]);
+    if(boat){
+      // A ring, not a pennant: it does not shrink or hide when the car rotates.
+      const halo=document.createElementNS(NS,'circle');
+      halo.setAttribute('class','halo'); halo.setAttribute('r',CAR_L*0.62);
+      g.appendChild(halo);
+    }
+    if(ambulance){
+      const ah=document.createElementNS(NS,'circle'); ah.setAttribute('class','ambHalo'); ah.setAttribute('r',CAR_L*0.7); g.appendChild(ah);
+    }
+    g.appendChild(body);
+    if(ambulance){
+      const mark=document.createElementNS(NS,'text'); mark.setAttribute('class','ambMark'); mark.setAttribute('x',0); mark.setAttribute('y',1); mark.textContent='+'; g.appendChild(mark);
+    }
+    [-CAR_L/2+5, CAR_L/2-10].forEach(y=>{
+      const w=document.createElementNS(NS,'rect');
+      w.setAttribute('class','win'); w.setAttribute('x',-CAR_W/2+3); w.setAttribute('y',y);
+      w.setAttribute('width',CAR_W-6); w.setAttribute('height',5); w.setAttribute('rx',2);
+      g.appendChild(w);
+    });
+    carLayer.appendChild(g); return g;
+  }
+
+  // Speed limit at every sample point along a route: the lower of what the
+  // corner radius allows and the junction cap, then two passes so a car brakes
+  // into a slow section and accelerates out of it rather than teleporting
+  // between speeds.
+  function speedProfile(s,stopD,outD){
+    const n=s.n, lim=new Float32Array(n);
+    for(let i=0;i<n;i++){
+      let v=CRUISE;
+      // Heading change measured over +/-CURV_W samples. A one-step baseline is
+      // dominated by sampling noise and reads every gentle bend as a hairpin.
+      const i0=i-CURV_W<0?0:i-CURV_W, i1=i+CURV_W>n-1?n-1:i+CURV_W;
+      if(i1>i && i>i0){
+        const ax=s.xs[i]-s.xs[i0], ay=s.ys[i]-s.ys[i0];
+        const bx=s.xs[i1]-s.xs[i], by=s.ys[i1]-s.ys[i];
+        const ma=Math.hypot(ax,ay)||1, mb=Math.hypot(bx,by)||1;
+        let c=(ax*bx+ay*by)/(ma*mb);
+        c=c<-1?-1:c>1?1:c;
+        const arc=(i1-i0)*STEP*0.5;
+        const kappa=Math.acos(c)/arc;                  // 1 / turn radius
+        if(kappa>1e-5) v=Math.min(v,Math.sqrt(A_LAT/kappa));
+      }
+      const d=i*STEP;
+      if(d>=stopD && d<=outD+STEP*3) v=Math.min(v,CROSS_SPEED);
+      lim[i]=Math.max(MIN_SPEED,v);
+    }
+    for(let i=n-2;i>=0;i--)                            // brake into slow bits
+      lim[i]=Math.min(lim[i],Math.sqrt(lim[i+1]*lim[i+1]+2*DECEL*STEP));
+    for(let i=1;i<n;i++)                               // accelerate out of them
+      lim[i]=Math.min(lim[i],Math.sqrt(lim[i-1]*lim[i-1]+2*ACCEL*STEP));
+    return lim;
+  }
+  function speedAt(car,d){
+    const lim=car.lim;
+    if(d<=0) return lim[0];
+    const f=d/STEP;
+    let i=f|0; if(i>lim.length-2) i=lim.length-2;
+    return lim[i]+(lim[i+1]-lim[i])*(f-i);
+  }
+
+  function place(car){
+    // Geometry must be refreshed every step — collision and separation read
+    // car.x/y/ux/uy. Only the DOM write is skippable.
+    const p=pointAt(car.samp,car.d);
+    car.x=p.x; car.y=p.y; car.ux=p.ux; car.uy=p.uy;
+    // A sub-pixel move is invisible but still costs an SVG attribute parse,
+    // which on a phone is real frame time with 60+ cars on screen.
+    if(car.lastD!==undefined && Math.abs(car.d-car.lastD)<0.35) return;
+    car.lastD=car.d;
+    const ang=Math.atan2(p.ux,-p.uy)*180/Math.PI;
+    car.el.setAttribute('transform','translate('+p.x+' '+p.y+') rotate('+ang+')');
+  }
+  // ---- Horn audio ----------------------------------------------------------
+  // Synthesised, so there's no audio file to ship. iOS will not start an
+  // AudioContext outside a user gesture, so this is created on the PLAY tap.
+  let actx=null, muted=false, lastHonk=0;
+  function initAudio(){
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC) return;
+    try{
+      if(!actx) actx=new AC();
+      // iOS starts the context SUSPENDED. A silent buffer alone does not lift
+      // that — resume() has to be called from inside a user gesture, and it
+      // returns a promise that can reject if the gesture has already ended.
+      if(actx.state!=='running' && actx.resume) actx.resume().catch(function(){});
+      const b=actx.createBuffer(1,1,22050), s=actx.createBufferSource();
+      s.buffer=b; s.connect(actx.destination); s.start(0);
+    }catch(e){ actx=null }
+  }
+  // ---- Interruptions -------------------------------------------------------
+  // elapsed is measured from startTime against the wall clock, so a phone call
+  // or an app switch used to burn the shift: 45 seconds away took the clock
+  // from 1:09 to 0:24 with nothing simulated in between. Pushing startTime
+  // forward by the gap makes the clock measure PLAYED time instead.
+  let hiddenAt=0;
+  function onHide(){
+    if(!running) return;
+    if(!hiddenAt) hiddenAt=performance.now();
+    if(actx && actx.state==='running' && actx.suspend) actx.suspend().catch(function(){});
+  }
+  function onShow(){
+    if(hiddenAt){
+      const gap=performance.now()-hiddenAt;
+      startTime+=gap;          // the shift did not advance while we were away
+      hiddenAt=0;
+      last=0; acc=0;           // and do not hand the loop one enormous frame
+    }
+    if(actx && actx.state!=='running' && actx.resume) actx.resume().catch(function(){});
+  }
+  document.addEventListener('visibilitychange',function(){
+    if(document.hidden) onHide(); else onShow();
+  });
+  window.addEventListener('blur',onHide);
+  window.addEventListener('focus',onShow);
+  window.addEventListener('pagehide',onHide);
+  window.addEventListener('pageshow',onShow);
+
+  // Belt and braces: unlock on the very first touch anywhere, whatever it hits.
+  // If the player's first interaction is a road rather than the PLAY button,
+  // that tap is still a valid gesture and the only one iOS may give us.
+  (function(){
+    const kick=function(){
+      initAudio();
+      if(actx && actx.state==='running'){
+        document.removeEventListener('pointerdown',kick,true);
+        document.removeEventListener('touchstart',kick,true);
+      }
+    };
+    document.addEventListener('pointerdown',kick,true);
+    document.addEventListener('touchstart',kick,true);
+  })();
+  // A real horn is two tones a rough minor third apart with a lot of upper
+  // harmonics, hence the sawtooth pair plus two squares through a lowpass.
+  function honk(anger,blasts){
+    if(!actx||muted) return;
+    if(actx.state!=='running' && actx.resume) actx.resume().catch(function(){});
+    if(actx.state!=='running' && actx.resume) actx.resume().catch(function(){});
+    const now=actx.currentTime;
+    if(now-lastHonk<0.07) return;         // keep overlapping honks from mushing
+    lastHonk=now;
+    const base=310*(0.9+Math.random()*0.2);
+    const peak=0.07+0.09*Math.min(1,(anger||0)/100);
+    for(let n=0;n<(blasts||1);n++){
+      const t=now+n*0.30;
+      const dur=0.16+Math.random()*0.14;
+      const lp=actx.createBiquadFilter();
+      lp.type='lowpass'; lp.frequency.value=2400; lp.Q.value=0.6;
+      const out=actx.createGain();
+      out.gain.setValueAtTime(0.0001,t);
+      out.gain.exponentialRampToValueAtTime(peak,t+0.014);
+      out.gain.setValueAtTime(peak,t+dur);
+      out.gain.exponentialRampToValueAtTime(0.0001,t+dur+0.08);
+      out.connect(lp); lp.connect(actx.destination);
+      [[1,'sawtooth',0.5],[1.19,'sawtooth',0.42],[2,'square',0.10],[2.38,'square',0.08]]
+      .forEach(function(v){
+        const o=actx.createOscillator(), g=actx.createGain();
+        o.type=v[1]; o.frequency.value=base*v[0]; g.gain.value=v[2];
+        o.connect(g); g.connect(out);
+        o.start(t); o.stop(t+dur+0.10);
+      });
+    }
+  }
+  // Two-tone hi-lo, six alternations. A car horn read as just another impatient
+  // driver; this has to say "emergency vehicle" the moment it lands.
+  function siren(){
+    if(!actx||muted) return;
+    if(actx.state!=='running' && actx.resume) actx.resume().catch(function(){});
+    const now=actx.currentTime, STEP=0.34, N=6, end=now+STEP*N;
+    const out=actx.createGain();
+    out.gain.setValueAtTime(0.0001,now);
+    out.gain.exponentialRampToValueAtTime(0.085,now+0.06);
+    out.gain.setValueAtTime(0.085,end-0.14);
+    out.gain.exponentialRampToValueAtTime(0.0001,end+0.06);
+    const lp=actx.createBiquadFilter();
+    lp.type='lowpass'; lp.frequency.value=3000; lp.Q.value=0.7;
+    out.connect(lp); lp.connect(actx.destination);
+    const o=actx.createOscillator(), g=actx.createGain();
+    const o2=actx.createOscillator(), g2=actx.createGain();
+    o.type='sawtooth'; g.gain.value=0.55;
+    o2.type='square';  g2.gain.value=0.16;      // octave up, for the edge
+    for(let i=0;i<N;i++){
+      const t=now+i*STEP, f=(i%2)?680:1010;
+      o.frequency.setValueAtTime(f,t);
+      o2.frequency.setValueAtTime(f*2,t);
+    }
+    o.connect(g); g.connect(out);
+    o2.connect(g2); g2.connect(out);
+    o.start(now); o.stop(end+0.12);
+    o2.start(now); o2.stop(end+0.12);
+  }
+  function whistle(kind){
+    if(!actx||muted) return;
+    if(actx.state!=='running' && actx.resume) actx.resume().catch(function(){});
+    if(actx.state!=='running' && actx.resume) actx.resume().catch(function(){});
+    const now=actx.currentTime, notes=kind==='ped'?[1750,2050]:kind==='alert'?[2300,1900,2300]:[2050];
+    notes.forEach(function(freq,i){
+      const t=now+i*0.12, o=actx.createOscillator(), g=actx.createGain();
+      o.type='sine'; o.frequency.setValueAtTime(freq,t);
+      o.frequency.exponentialRampToValueAtTime(freq*1.06,t+0.08);
+      g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.11,t+0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+0.10);
+      o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t+0.11);
+    });
+  }
+  function guardReact(cls,ms){ guardEl.classList.remove('celebrate','alert','pedwave'); void guardEl.getBBox(); guardEl.classList.add(cls); setTimeout(()=>guardEl.classList.remove(cls),ms||500); }
+  const muteBtn=document.getElementById('mute');
+  muteBtn.addEventListener('click',function(e){
+    e.stopPropagation();
+    muted=!muted;
+    muteBtn.textContent=muted?'🔇':'🔊';
+    muteBtn.setAttribute('aria-label',muted?'Unmute game sounds':'Mute game sounds');
+    if(!muted){ initAudio(); honk(40,1) }
+  });
+
+  // ---- Collisions ----------------------------------------------------------
+  // Each car is approximated by two circles along its length — a capsule. Cheap
+  // and much tighter than a single bounding circle for a 20x34 body.
+  const CAP_OFF=CAR_L*0.25, CAP_R=10.5, CAP_D2=(CAP_R*2)*(CAP_R*2);
+  function overlapping(a,b){
+    const grow=1;
+    for(let s=-1;s<=1;s+=2){
+      const ax=a.x+a.ux*CAP_OFF*s, ay=a.y+a.uy*CAP_OFF*s;
+      for(let u=-1;u<=1;u+=2){
+        const bx=b.x+b.ux*CAP_OFF*u, by=b.y+b.uy*CAP_OFF*u;
+        const dx=ax-bx, dy=ay-by;
+        if(dx*dx+dy*dy<CAP_D2*grow) return true;
+      }
+    }
+    return false;
+  }
+  function crashSound(){
+    if(!actx||muted) return;
+    if(actx.state!=='running' && actx.resume) actx.resume().catch(function(){});
+    if(actx.state!=='running' && actx.resume) actx.resume().catch(function(){});
+    const t=actx.currentTime;
+    const len=Math.floor(actx.sampleRate*0.5);
+    const buf=actx.createBuffer(1,len,actx.sampleRate), ch=buf.getChannelData(0);
+    for(let i=0;i<len;i++) ch[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.2);
+    const src=actx.createBufferSource(); src.buffer=buf;
+    const lp=actx.createBiquadFilter(); lp.type='lowpass';
+    lp.frequency.setValueAtTime(3200,t); lp.frequency.exponentialRampToValueAtTime(300,t+0.45);
+    const g=actx.createGain();
+    g.gain.setValueAtTime(0.5,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.55);
+    src.connect(lp); lp.connect(g); g.connect(actx.destination); src.start(t);
+    const o=actx.createOscillator(); o.type='triangle';
+    o.frequency.setValueAtTime(180,t); o.frequency.exponentialRampToValueAtTime(45,t+0.35);
+    const og=actx.createGain();
+    og.gain.setValueAtTime(0.35,t); og.gain.exponentialRampToValueAtTime(0.0001,t+0.4);
+    o.connect(og); og.connect(actx.destination); o.start(t); o.stop(t+0.45);
+  }
+  // Floating score at the car, so promptness is legible. Without it the
+  // difference between a +33 wave-through and a +12 crawl is invisible.
+  function pop(x,y,v,boat){
+    const t=add('fx','text',{x:x,y:y,'class':'pop '+(v<0?'bad':(boat?'boat':'good'))});
+    t.textContent=(v>0?'+':'')+Math.round(v);
+    const an=document.createElementNS(NS,'animateTransform');
+    an.setAttribute('attributeName','transform'); an.setAttribute('type','translate');
+    an.setAttribute('from','0 0'); an.setAttribute('to','0 -34');
+    an.setAttribute('dur','0.9s'); an.setAttribute('fill','freeze');
+    t.appendChild(an);
+    const fo=document.createElementNS(NS,'animate');
+    fo.setAttribute('attributeName','opacity'); fo.setAttribute('from','1'); fo.setAttribute('to','0');
+    fo.setAttribute('dur','0.9s'); fo.setAttribute('fill','freeze');
+    t.appendChild(fo);
+    setTimeout(function(){ if(t.parentNode) t.remove() },950);
+  }
+  function screech(){
+    if(!actx||muted) return;
+    if(actx.state!=='running' && actx.resume) actx.resume().catch(function(){});
+    if(actx.state!=='running' && actx.resume) actx.resume().catch(function(){});
+    const t=actx.currentTime, len=Math.floor(actx.sampleRate*0.3);
+    const b=actx.createBuffer(1,len,actx.sampleRate), ch=b.getChannelData(0);
+    for(let i=0;i<len;i++) ch[i]=(Math.random()*2-1)*Math.pow(1-i/len,1.4);
+    const s=actx.createBufferSource(); s.buffer=b;
+    const bp=actx.createBiquadFilter(); bp.type='bandpass';
+    bp.frequency.setValueAtTime(1900,t); bp.Q.value=7;
+    const g=actx.createGain();
+    g.gain.setValueAtTime(0.16,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.32);
+    s.connect(bp); bp.connect(g); g.connect(actx.destination); s.start(t);
+  }
+  function boom(x,y){
+    // These elements were never removed: the burst finished animating but stayed
+    // in the fx layer at full radius, and the glyph sat there for the rest of
+    // the run. Both are now torn down when the animation ends.
+    const c=add('fx','circle',{cx:x,cy:y,r:8,fill:'#ffce5a',opacity:'.95'});
+    [['r','8','78'],['opacity','.9','0']].forEach(function(v){
+      const an=document.createElementNS(NS,'animate');
+      an.setAttribute('attributeName',v[0]); an.setAttribute('from',v[1]);
+      an.setAttribute('to',v[2]); an.setAttribute('dur',BOOM_SECS+'s'); an.setAttribute('fill','freeze');
+      c.appendChild(an);
+    });
+    const t=add('fx','text',{x:x,y:y+16,'class':'boomtxt'}); t.textContent='💥';
+    const fade=document.createElementNS(NS,'animate');
+    fade.setAttribute('attributeName','opacity'); fade.setAttribute('from','1'); fade.setAttribute('to','0');
+    fade.setAttribute('begin',(BOOM_SECS*0.45)+'s'); fade.setAttribute('dur',(BOOM_SECS*0.55)+'s');
+    fade.setAttribute('fill','freeze');
+    t.appendChild(fade);
+    setTimeout(function(){
+      if(c.parentNode) c.remove();
+      if(t.parentNode) t.remove();
+    }, BOOM_SECS*1000+60);
+  }
+  // A crash no longer ends the run outright — that was a knowledge gate, brutal
+  // before you learn to wait for the junction to clear and near-impossible
+  // after. Instead the wreck sits in the junction and blocks it while the tow
+  // truck works, which is a far more interesting punishment. Three ends it.
+  function crash(a,b){
+    if(blockedT>0 || crashed) return;
+    collisions++; crashPair=[dirName[a.road],dirName[b.road]]; breakFlow('CRASH');
+    a.wrecked=b.wrecked=true;
+    a.el.classList.add('wreck'); b.el.classList.add('wreck');
+    boom((a.x+b.x)/2,(a.y+b.y)/2);
+    crashSound();
+    if(navigator.vibrate) navigator.vibrate([40,60,140]);
+    if(!crashWarned){
+      crashWarned=true;
+      blockedT=BLOCK_SECS; wreckCars=[a,b];
+      showEvent('\uD83D\uDCA5 FREE WARNING \u2014 no strike',2200,true);
+      moment('\uD83D\uDCA5 LET THE JUNCTION CLEAR',
+             'Cars still crossing need a moment. Cutting them off is what causes this. Next one counts.',
+             4200,true,3,true);
+      statusEl.textContent='\uD83D\uDCA5 Warning \u2014 let the junction clear before switching';
+      return;
+    }
+    strikes++;
+    if(CRASH_COST>0){ score=Math.max(0,score-CRASH_COST); pop((a.x+b.x)/2,(a.y+b.y)/2,-CRASH_COST,false) }
+    if(strikes>=MAX_STRIKES){
+      crashed=true;
+      statusEl.textContent='\uD83D\uDCA5 THIRD COLLISION — SHIFT OVER';
+      end('crash');
+      return;
+    }
+    blockedT=BLOCK_SECS; wreckCars=[a,b];
+    statusEl.textContent='\uD83D\uDCA5 CRASH! Junction blocked ('+strikes+'/'+MAX_STRIKES+')';
+  }
+
+  function pickExit(o){
+    const prefs=turnPref[o];
+    let x=Math.random(), acc=0;
+    for(let i=0;i<prefs.length;i++){ acc+=turnWeight[i]; if(x<acc) return prefs[i] }
+    return prefs[prefs.length-1];
+  }
+  function elapsedNow(){ return running?(performance.now()-startTime)/1000:0 }
+  function spawn(road,fast,special){
+    const mine=cars.filter(c=>c.road===road);
+    if(mine.length>=CAP_OF[road]) return;
+    const base=spawnBase[road];
+    let minD=Infinity;
+    for(const c of mine) if(c.d<minD) minD=c.d;
+    const d=Math.min(base, minD-GAP);
+    if(d<base-QUEUE_DEPTH) return;
+    const ex=pickExit(road), rt=routes[road][ex];
+    // Only cars leaving toward the harbour can be boat traffic, and only while
+    // there is still a boat to catch.
+    const ambulance=special==='ambulance';
+    // One in nine is a delivery truck or the island bus: longer and slower, so
+    // it takes a real bite out of whichever green it is sitting on. Streets stop
+    // being interchangeable, which is what makes the choice between them hard.
+    const truck = !ambulance && Math.random()<TRUCK_SHARE;
+    const boat = !ambulance && !truck && ex===BOAT_EXIT && !sailed && elapsedNow()<SCH.SAIL-6 && Math.random()<BOAT_SHARE;
+    const car={road:road,exit:ex,path:rt.path,samp:rt.samp,lim:rt.lim,len:rt.len,stop:rt.stop,
+               outStart:rt.outStart,pedExit:rt.pedExit,d:d,el:makeCarEl(boat,ambulance,truck),wait:0,anger:0,committed:false,
+               stuckT:0, boat:boat, truck:truck, ambulance:ambulance, mul:(ambulance?1.22:(fast?1.15:1))*(truck?TRUCK_SPEED:1)};
+    if(boat) boatTotal++;
+    cars.push(car); place(car); return car;
+  }
+  function pointGuard(road){
+    const d=dirOf[road];
+    const deg=Math.atan2(d[0],-d[1])*180/Math.PI;
+    guardEl.style.transform='rotate('+deg+'deg)';
+    guardEl.classList.remove('wave'); void guardEl.getBBox(); guardEl.classList.add('wave');
+  }
+  // Endless used to be one dial: more arrivals. Difficulty as a volume knob is
+  // the least interesting kind. Waves now shorten the green as well, so the
+  // rhythm changes rather than only the load.
+  function greenLife(){
+    const waveTrim = endless ? Math.max(0.62, 1-wave*0.055) : 1;
+    return GREEN_LIFE*((shift&&shift.green)||1)*waveTrim;
+  }
+  // Cars already across the line keep going — freezing a car mid-junction
+  // deadlocks the map. Nothing new enters.
+  function allStop(){
+    if(!running) return;
+    for(const r of roads) glowEl[r].classList.remove('on','warn');
+    if(stopZone) stopZone.classList.remove('on');
+    if(!active){ statusEl.textContent='All red — tap a road'; return }
+    active=null; greenT=0;
+    guardEl.style.transform='rotate(0deg)';
+    guardReact('alert',420);
+    whistle('alert');
+    if(navigator.vibrate) navigator.vibrate([14,26,14]);
+    statusEl.textContent='\u270B ALL RED';
+    showEvent('\u270B ALL RED \u2014 junction held',800,false);
+    if(!coached.stop){ coached.stop=true; coach('<b>All red.</b> Tap the guard any time to stop the road you have open.',2200); }
+  }
+  function choose(road){
+    if(!running) return;
+    if(!coached.road){ coached.road=true; coach('<b>Good.</b> Keep switching before a queue backs up.',2000); }
+    // A green now has a life. Holding a street open indefinitely meant one
+    // decision every five seconds played as well as one every second — the
+    // game was effectively idle. Waving traffic through is an act you have to
+    // keep repeating, and a lapse in attention lets the junction go red.
+    // Re-tapping the live street RENEWS the green. Only a quick double-tap
+    // waves traffic through — otherwise every routine renewal would trigger the
+    // risk lever by accident, which turns a deliberate gamble into free points.
+    const now=performance.now();
+    if(road===active){
+      lastTap=now; greenT=greenLife();
+      statusEl.textContent='GO: '+Cap(dirName[road]);
+      return;
+    }
+    lastTap=now;
+    active=road; greenT=greenLife();
+    if(stopZone) stopZone.classList.add('on');
+    pointGuard(road); whistle('go');
+    for(const r of roads) glowEl[r].classList.toggle('on', r===road);
+    tip.classList.add('hide');
+    statusEl.textContent='GO: '+Cap(dirName[road]);
+    if(navigator.vibrate) navigator.vibrate(12);
+  }
+  function startPedCrossing(selfStarted){
+    if(!running || !pedWaitingRoad || pedT>0) return;
+    if(selfStarted && active===pedWaitingRoad){
+      // Walking into a live street: the guard did not hold it in time.
+      statusEl.textContent='\uD83D\uDEB6 They stepped out on '+dirName[pedWaitingRoad]+'!';
+      screech();
+    }
+    pedRoad=pedWaitingRoad; pedWaitingRoad=null; pedT=PED_SECS;
+    pedEl.classList.remove('waiting','stepping'); pedEl.classList.add('crossing');
+    pedEl.dataset.wait=String(pedWait);
+    pointGuard(pedRoad); guardReact('pedwave',520); whistle('ped');
+    statusEl.textContent='🚶 Crossing '+dirName[pedRoad]+' — THAT ROAD HELD';
+    pedWait=0; pedPenalty=false;
+    if(navigator.vibrate) navigator.vibrate([8,45,8]);
+  }
+  pedEl.addEventListener('pointerdown',function(e){e.preventDefault();e.stopPropagation();startPedCrossing()},{passive:false});
+
+  // ---- Tap: screen point -> map coords -> nearest leg by bearing ------------
+  const world=document.getElementById('world');
+  // preserveAspectRatio="slice" means the viewBox is scaled to COVER the box and
+  // centred, so the fallback has to mirror that, not assume a stretch fit.
+  function mapPointFallback(clientX,clientY){
+    const b=world.getBoundingClientRect();
+    if(!b.width||!b.height) return null;
+    const k=Math.max(b.width/1000,b.height/1000);
+    return {x:(clientX-b.left-(b.width-1000*k)/2)/k,
+            y:(clientY-b.top-(b.height-1000*k)/2)/k};
+  }
+  function mapPoint(clientX,clientY){
+    let u=null;
+    try{
+      const ctm=svg.getScreenCTM();
+      if(ctm && ctm.inverse){
+        const pt=svg.createSVGPoint(); pt.x=clientX; pt.y=clientY;
+        u=pt.matrixTransform(ctm.inverse());
+      }
+    }catch(e){}
+    return u || mapPointFallback(clientX,clientY);
+  }
+  function roadAt(clientX,clientY){
+    const u=mapPoint(clientX,clientY);
+    if(!u) return null;
+    const dx=u.x-HUB[0], dy=u.y-HUB[1], m=Math.hypot(dx,dy);
+    if(!m) return null;
+    let best=null,bd=-2;
+    for(const r of roads){
+      const dot=(dx/m)*dirOf[r][0]+(dy/m)*dirOf[r][1];
+      if(dot>bd){bd=dot;best=r}
+    }
+    return best;
+  }
+  // Tapping the guard in the middle of the junction is an ALL RED. Until now a
+  // green could only be ended by waiting it out, which left the player watching
+  // a road they had already decided to close.
+  const STOP_R=112;                       // viewBox units around the hub
+  world.addEventListener('pointerdown',function(e){
+    e.preventDefault();
+    const u=mapPoint(e.clientX,e.clientY);
+    if(u && Math.hypot(u.x-HUB[0],u.y-HUB[1])<=STOP_R){ allStop(); return }
+    const r=roadAt(e.clientX,e.clientY);
+    if(r) choose(r);
+  },{passive:false});
+
+  // ---- Loop ----------------------------------------------------------------
+  function update(t){
+    if(!running) return;
+    if(!last) last=t;
+    // FRAME PACING. dt used to be clamped to 0.035s — 28.6fps. Any phone slower
+    // than that ran the entire simulation in slow motion: at 20fps the game
+    // played at 70% speed, at 15fps barely half, while the clock kept real time.
+    // The fix is to sub-step. A long frame is now simulated as several fixed
+    // steps, so the game advances at wall-clock speed whatever the frame rate,
+    // and spacing and collision maths still see small, safe time slices.
+    const raw=(t-last)/1000; last=t;
+    diagFrame(raw*1000);
+    acc+=Math.min(raw,0.25);                 // ignore catastrophic stalls
+    let steps=0;
+    while(acc>=SIM_DT && steps<MAX_STEPS){ acc-=SIM_DT; steps++ }
+    if(steps===0){ requestAnimationFrame(update); return }
+    const dt=SIM_DT*steps;
+    const elapsed=(t-startTime)/1000, remain=Math.max(0,DURATION-elapsed);
+    if(endless){
+      waveT+=dt;
+      if(waveT>=WAVE_SECS){ waveT=0; wave++;
+        showEvent('WAVE '+(wave+1)+' — TRAFFIC BUILDING',1400,true);
+        // Re-roll the hazards so the pressure keeps changing shape.
+        const keep=SCH.SAIL; SCH=rollSchedule();
+        SCH.RAIN=0; SCH.RAMP=0;
+        // Crossings get busier with each wave, on top of the shorter greens.
+        pedNext=Math.min(pedNext, 5+Math.random()*4);
+        SCH.FERRY=elapsed+jit(16,4); SCH.SAIL=SCH.FERRY+jit(34,5);
+        if(SCH.hasFlood){ SCH.FLOOD=elapsed+jit(8,3); SCH.HIGH=SCH.FLOOD+jit(16,4); SCH.DEEP=SCH.HIGH+jit(20,5) }
+        if(SCH.hasAmb) SCH.AMB=elapsed+jit(14,5);
+        ferryTriggered=false; sailed=false; ambulanceSpawned=false; ambulanceResolved=false;
+        floodBonusDone=false; floodCleared=0; ferryRushDone=false; ferryRushCleared=0;
+      }
+    }
+    clock.textContent = endless
+      ? ('W'+(wave+1))
+      : (Math.floor(remain/60)+':'+String(Math.floor(remain%60)).padStart(2,'0'));
+
+    // Sprint 5 weather escalates visibly and mechanically. Beach Road remains usable,
+    // but every stage makes it more costly to ignore.
+    let nextFlood=0;
+    if(elapsed>=SCH.DEEP) nextFlood=3;
+    else if(elapsed>=SCH.HIGH) nextFlood=2;
+    else if(elapsed>=SCH.FLOOD) nextFlood=1;
+    floodStage=nextFlood;
+    rainOverlay.classList.toggle('on',elapsed>=SCH.RAIN);
+    rainOverlay.classList.toggle('heavy',floodStage>=2);
+    floodPath.setAttribute('class','floodwater'+(floodStage?' stage'+floodStage:''));
+    weatherHud.classList.toggle('wet',elapsed>=SCH.RAIN); weatherHud.classList.toggle('high',floodStage>=2); guardEl.classList.toggle('rain',elapsed>=SCH.RAIN);
+    weatherHud.textContent=floodStage===3?'🌊 DEEP WATER':floodStage===2?'🌊 HIGH WATER':floodStage===1?'🌧️ BEACH RD FLOODING':elapsed>=SCH.RAIN?'🌧️ RAIN':'☀️ DRY';
+    if(!rainAnnounced && elapsed>=SCH.RAIN){ rainAnnounced=true; showEvent('🌧️ RAIN MOVING IN',1100,false); }
+    if(lastFloodStage!==floodStage){
+      lastFloodStage=floodStage;
+      if(floodStage===1){ showEvent('🌧️ BEACH ROAD TAKING WATER',1500,true); statusEl.textContent='🌧️ Keep Beach Road moving · 0/'+FLOOD_TARGET; if(!coached.weather){coached.weather=true;coach("<b>High water:</b> Beach Road slows down. Don't let that queue get away from you.",2500);} }
+      if(floodStage===2){ showEvent('🌊 HIGH WATER — BEACH ROAD SLOWING',1600,true); breakFlow('HIGH WATER'); }
+      if(floodStage===3) showEvent('🌊 DEEP WATER — BEACH ROAD CRAWLING',1700,true);
+    }
+
+    // The ferry is a sustained surge, not a one-off burst: the boat keeps
+    // feeding Water Street for FERRY_SURGE seconds after it lands.
+    const ferrying = elapsed>=SCH.FERRY && elapsed<SCH.FERRY+FERRY_SURGE;
+    const ferryCountdown=Math.ceil(SCH.FERRY-elapsed);
+    if(elapsed<SCH.FERRY && ferryCountdown<=5 && ferryCountdown>=1 && ferryWarnShown!==ferryCountdown){
+      ferryWarnShown=ferryCountdown; showEvent('⛴️ FERRY ARRIVING — '+ferryCountdown,760,false);
+    }
+    if(!ferryTriggered && elapsed>=SCH.FERRY){
+      ferryTriggered=true; ferryRushCleared=0; ferryRushDone=false;
+      statusEl.textContent='⛴️ FERRY RUSH — clear '+FERRY_RUSH_TARGET+' cars in '+FERRY_RUSH_SECS+'s!';
+      showEvent('⛴️ FERRY UNLOADING!  '+FERRY_RUSH_TARGET+' CARS · '+FERRY_RUSH_SECS+' SECONDS',1800,false); if(!coached.ferry){coached.ferry=true;coach('<b>Ferry rush:</b> Water Street is about to surge. Clear '+FERRY_RUSH_TARGET+' cars for a big bonus.',2500);}
+      honk(55,2);
+      for(let i=0;i<FERRY_BURST;i++){(function(k){setTimeout(function(){if(running)spawn('N',true)},k*90)})(i)}
+    }
+    if(ferryTriggered && !ferryRushDone && elapsed>=SCH.FERRY+FERRY_RUSH_SECS){
+      ferryRushDone=true;
+      if(ferryRushCleared>=FERRY_RUSH_TARGET){ score+=FERRY_RUSH_BONUS; showEvent('FERRY RUSH COMPLETE  +'+FERRY_RUSH_BONUS,1600,false); moment('⛴️ FERRY SAVED!','+'+FERRY_RUSH_BONUS+' · RUSH CLEARED',1450,false,3); setFlow(flow+2); }
+      else showEvent('FERRY RUSH MISSED · '+ferryRushCleared+'/'+FERRY_RUSH_TARGET,1200,true);
+    }
+    ferryMsg.textContent = elapsed<SCH.FERRY
+      ? '⛴️ Ferry in 0:'+String(Math.max(0,ferryCountdown)).padStart(2,'0')
+      : (!ferryRushDone && elapsed<SCH.FERRY+FERRY_RUSH_SECS
+          ? '⛴️ RUSH '+ferryRushCleared+'/'+FERRY_RUSH_TARGET+' · '+Math.max(0,Math.ceil(SCH.FERRY+FERRY_RUSH_SECS-elapsed))+'s'
+          : (ferrying ? '\u26F4\uFE0F Unloading — Water St'
+                      : (!sailed ? '\u26F4\uFE0F Sails in 0:'+String(Math.max(0,Math.ceil(SCH.SAIL-elapsed))).padStart(2,'0')
+                                 : '\u26F4\uFE0F Boat away')));
+
+    // Sprint 4 priority event: one ambulance demands a fast, deliberate clear path.
+    if(!ambulanceTriggered && elapsed>=SCH.AMB){ siren(); guardReact('alert',700);
+      ambulanceTriggered=true; ambulanceDeadline=elapsed+AMBULANCE_LIMIT;
+      const candidates=roads.slice().sort((a,b)=>cars.filter(c=>c.road===a&&!c.dead).length-cars.filter(c=>c.road===b&&!c.dead).length);
+      for(const r of candidates){ ambulanceCar=spawn(r,true,'ambulance'); if(ambulanceCar) break; }
+      if(ambulanceCar){
+        showEvent('🚑 AMBULANCE — CLEAR '+Cap(dirName[ambulanceCar.road])+' · '+AMBULANCE_LIMIT+'s',1800,true); if(!coached.ambulance){coached.ambulance=true;coach("<b>Emergency:</b> give the ambulance's road priority before the timer expires.",2400);}
+        statusEl.textContent='🚑 PRIORITY: '+Cap(dirName[ambulanceCar.road]);
+      }
+    }
+    if(ambulanceTriggered && !ambulanceResolved && ambulanceCar && elapsed>ambulanceDeadline && !ambulanceCar.dead){
+      ambulanceResolved=true; breakFlow('AMBULANCE DELAYED');
+      showEvent('🚑 AMBULANCE DELAYED — FLOW LOST',1500,true);
+    }
+
+    // Budget rather than a per-frame coin flip, so the arrival rate is exact
+    // and can exceed one car per frame. Which street a car comes from is drawn
+    // from the volume table for the current phase.
+    const waveMul = endless ? Math.min(WAVE_MAX, 1+wave*WAVE_RATE) : 1;
+    spawnAcc+=dt*waveMul*(ferrying?shift.rate[2]:(elapsed<SCH.RAMP?shift.rate[0]:shift.rate[1]));
+    // Platoons. Smooth arrivals meant the busiest street was obvious; bursts
+    // push two streets into trouble at once, which is where the real decisions
+    // live. The median gap between best and second-best choice was 26%.
+    burstT-=dt;
+    if(burstT<=0){
+      burstT=BURST_EVERY[0]+Math.random()*(BURST_EVERY[1]-BURST_EVERY[0]);
+      const r=weightedRoad(shift.mix), n=2+Math.floor(Math.random()*3);
+      for(let i=0;i<n;i++) spawn(r,false);
+    }
+    while(spawnAcc>=1){
+      spawnAcc-=1;
+      spawn(weightedRoad(ferrying?ARRIVE_FERRY:shift.mix), ferrying);
+    }
+
+    // Spacing is geometric now. Arc-length chains compared distances measured
+    // along DIFFERENT routes, which stops meaning anything the moment two cars
+    // from the same street pick different exits — that produced both the stalls
+    // in the junction and the overlap when one car turned across another.
+    //
+    // Each car carries an elliptical exclusion zone: SEP_A ahead, SEP_B to the
+    // side. A car ahead of me inside that ellipse holds me back, and the
+    // constraint relaxes smoothly as our paths diverge sideways.
+    //
+    // Only cars sharing an approach or an exit avoid each other. Genuine cross
+    // traffic is deliberately left alone, so collisions can still happen.
+    // Only cars sharing an approach or an exit can constrain each other, so
+    // bucket by those instead of comparing every car with every other. At 48
+    // cars that was 2,300 pair tests every frame — 138k a second of pure JS.
+    const byRoad={}, byExit={};
+    for(const c of cars){
+      (byRoad[c.road]||(byRoad[c.road]=[])).push(c);
+      (byExit[c.exit]||(byExit[c.exit]=[])).push(c);
+    }
+    for(const car of cars){
+      let lim=Infinity;
+      const sameRoad=byRoad[car.road]||EMPTY, sameExit=byExit[car.exit]||EMPTY;
+      for(let bi=0;bi<2;bi++){
+        const bucket = bi===0?sameRoad:sameExit;
+        for(let k=0;k<bucket.length;k++){
+          const o=bucket[k];
+        if(o===car) continue;
+        if(bi===1 && o.road===car.road) continue;   // already seen in bucket 0
+        const rx=o.x-car.x, ry=o.y-car.y;
+        const along=rx*car.ux+ry*car.uy;
+        if(along<=0) continue;                       // behind me, not my problem
+        // ...and I must be behind IT from its own point of view. Without this
+        // the relation is symmetric: two cars diverging through the junction at
+        // an angle can each count the other as "ahead", and both freeze forever.
+        if(rx*o.ux+ry*o.uy<=0) continue;
+        const lat=Math.abs(rx*car.uy-ry*car.ux);
+        if(lat>=SEP_B) continue;                     // clear in the next lane
+        const q=lat/SEP_B;
+        const need=SEP_A*Math.sqrt(1-q*q);
+        const cap=car.d+(along-need);
+        if(cap<lim) lim=cap;
+        }
+      }
+      car.hold=lim;   // NB: car.lim is the speed profile array — do not reuse
+    }
+
+    // Sprint 4 pedestrians wait for the crossing guard. The player decides when
+    // to stop a road and let them cross; waiting too long creates a small penalty.
+    if(pedT>0){
+      pedT-=dt;
+      const progress=1-Math.max(0,pedT)/PED_SECS;
+      if(pedBase&&pedPerp){
+        const span=widthOf[pedRoad]*0.62, off=(progress-.5)*span;
+        pedEl.setAttribute('x',pedBase.x+pedPerp[0]*off); pedEl.setAttribute('y',pedBase.y+pedPerp[1]*off+5);
+      }
+      if(pedT<=0){
+        const waited=Number(pedEl.dataset.wait||0);
+        // These were sized to outweigh an ALL-STOP: a crossing used to freeze
+        // every approach. It now holds one road, so the opportunity cost is a
+        // few car clears, not the whole junction. Priced accordingly.
+        const base=waited<=4?130:waited<=8?90:60;
+        const award=Math.round(base*flowMult);
+        score+=award; pedPoints+=award; pedCrossed++; if(waited<=4) happyPeds++;
+        if(pedBase) pop(pedBase.x,pedBase.y,award,false);
+        pedEl.textContent=waited<=4?'😊':'👍';
+        statusEl.textContent=(waited<=4?'😊 HAPPY CROSSING ':'🚶 CROSSING COMPLETE ')+' +'+award;
+        if(waited<=4){ setFlow(flow+1); guardReact('celebrate',560); if(waited<=2.5) moment('😊 PERFECT CROSSING','QUICK & SAFE · +'+award,1050,false,2); }
+        setTimeout(()=>{ if(pedT<=0) pedEl.classList.add('hide') },300);
+        pedRoad=null; pedEl.classList.remove('crossing');
+        for(const c of cars) c.pedHeld=false;
+        pedNext=(PED_EVERY[0]+Math.random()*(PED_EVERY[1]-PED_EVERY[0]))/shift.peds;
+      }
+    }else if(pedWaitingRoad){
+      pedWait+=dt;
+      const stepping = pedWait >= PED_PATIENCE-PED_WARN;
+      pedEl.textContent = stepping ? '😠🚶' : '🚶';
+      pedEl.classList.toggle('stepping', stepping);
+      if(stepping && !pedPenalty){
+        pedPenalty=true;   // reused as a "warned once" latch
+        showEvent('\uD83D\uDEB6 STEPPING OUT — '+Cap(dirName[pedWaitingRoad]),1200,true);
+        if(navigator.vibrate) navigator.vibrate([10,60,10]);
+      }
+      // They go whether the road is red or not. That is the hazard.
+      if(pedWait>=PED_PATIENCE) startPedCrossing(true);
+    }else{
+      pedNext-=dt;
+      if(pedNext<=0){
+        pedWaitingRoad=roads[Math.floor(Math.random()*roads.length)]; pedWait=0; pedPenalty=false; if(!coached.ped){coached.ped=true;coach('<b>Pedestrian:</b> wave them across before they step out on their own.',2600);}
+        const q=routes[pedWaitingRoad][Object.keys(routes[pedWaitingRoad])[0]];
+        const pt=pointAt(q.samp,q.stop+6); pedBase={x:pt.x,y:pt.y}; pedPerp=[-pt.uy,pt.ux];
+        const half=widthOf[pedWaitingRoad]*0.31;
+        pedEl.setAttribute('x',pt.x-pedPerp[0]*half); pedEl.setAttribute('y',pt.y-pedPerp[1]*half+5);
+        pedEl.textContent='🚶'; pedEl.classList.remove('hide','crossing','stepping'); pedEl.classList.add('waiting');
+        statusEl.textContent='🚶 Waiting to cross '+dirName[pedWaitingRoad]+' — wave them over';
+      }
+    }
+
+    // Tow truck. Nothing moves through the junction until it is done.
+    if(blockedT>0){
+      blockedT-=dt;
+      for(const w of wreckCars) w.el.style.opacity=Math.max(0,Math.min(1,blockedT/0.6));
+      if(blockedT<=0){
+        for(const w of wreckCars){ w.dead=true; w.el.remove() }
+        wreckCars=[]; statusEl.textContent='Junction clear again';
+      }
+    }
+
+    if(!sailed && elapsed>=SCH.SAIL){
+      sailed=true;
+      let left=0;
+      for(const c of cars) if(c.boat && !c.dead){ left++; c.el.classList.add('missed') }
+      statusEl.textContent = left ? '\u26F4\uFE0F BOAT SAILED — '+left+' missed it' : '\u26F4\uFE0F Boat away, all aboard!';
+    }
+
+    // FLOW decays if nothing clears. It sat at x4 for 65% of a shift, which
+    // makes a multiplier a baseline rather than a reward. Now it has to be fed.
+    sinceClear+=dt;
+    if(flow>0 && sinceClear>FLOW_IDLE){ sinceClear=0; setFlow(Math.max(0,flow-FLOW_STEP)) }
+
+    // Green light burns down; when it lapses the junction goes all-red.
+    if(active){
+      greenT-=dt;
+      const g=glowEl[active];
+      if(greenT<=0){
+        g.classList.remove('on','warn');
+        if(stopZone) stopZone.classList.remove('on');
+        active=null; greenT=0;
+        statusEl.textContent='All red — tap a road';
+      }else{
+        g.classList.toggle('warn', greenT<GREEN_WARN);
+      }
+    }
+    let angerSum=0, waiting=0;
+    for(const car of cars){
+      // A car is only "committed" once it has ACTUALLY crossed the stop line.
+      let limit=car.hold;
+      if(!car.committed && active!==car.road) limit=Math.min(limit,car.stop);
+      // Safety valve. Curved paths mean a car can overshoot marginally into the
+      // exclusion zone, and a hard cap there is an absorbing state — it can
+      // never move again, and it blocks its whole street. A car already in the
+      // junction that has been unable to move for a moment is allowed to creep
+      // out, so gridlock can never be permanent.
+      if(car.wrecked) limit=car.d;                       // wrecks do not move
+      // Nothing new enters the junction while the tow truck is working.
+      else if(blockedT>0 && !car.committed) limit=Math.min(limit,car.stop);
+      // A crossing holds ONLY the street being crossed. The blanket all-stop
+      // that used to sit here froze every approach at once, which is both wrong
+      // — the other four streets do not touch that crosswalk — and the cause of
+      // instant gridlock: every car in the game counted as waiting at the same
+      // moment. Cars turning ONTO the crossed street are still held short of
+      // the crosswalk by the pedExit latch below, which is what actually keeps
+      // pedestrians safe.
+      else if(pedRoad===car.road && !car.committed) limit=Math.min(limit,car.stop);
+      else{
+        // Yield to pedestrians in the crosswalk. A car mid-junction that is about
+        // to turn onto the street being crossed waits short of the crossing — it
+        // does not get to finish its turn through them. A car that was already
+        // past the crosswalk when they stepped out carries on, rather than
+        // stopping dead on top of them.
+        //
+        // The hold LATCHES. Testing `d < pedExit` alone releases the car the
+        // instant it reaches the line — the condition turns itself off — and it
+        // sails straight through.
+        if(pedRoad && car.committed && car.exit===pedRoad){
+          if(car.d < car.pedExit-0.5) car.pedHeld=true;
+          if(car.pedHeld) limit=Math.min(limit,car.pedExit);
+        }else car.pedHeld=false;
+        // The creep valve must not override a yield, or cars would trickle
+        // through the crossing anyway.
+        if(!car.pedHeld && car.committed && car.stuckT>1.0) limit=Math.max(limit,car.d+dt*CREEP);
+      }
+      const onFloodedBeach=(car.road==='SE'&&!car.committed)||(car.exit==='SE'&&car.committed);
+      const waterMul=onFloodedBeach?FLOOD_SPEED[floodStage]:1;
+      car.tailgating=false;
+      const want=car.d+dt*speedAt(car,car.d)*car.mul*waterMul*(1+Math.min(.2,car.wait/120));
+      const next=Math.min(want,limit);
+      if(next>car.d+0.05){
+        car.d=next; car.stuckT=0;
+        // Anger cools once you're actually moving. Without this it only ever
+        // accumulated, so the meter measured elapsed time rather than how well
+        // the shift was being run, and a recovery never showed.
+        if(car.anger>0){
+          car.anger=Math.max(0,car.anger-dt*ANGER_COOL);
+          if(car.anger<60 && car.honked){ car.honked=false; car.el.classList.remove('mad') }
+        }
+        car.wait=Math.max(0,car.wait-dt*(ANGER_COOL/ANGER_RATE));
+        // Failure to yield: a car rolls onto the crossing while it is occupied.
+        // Only counts on the way OUT, since the approach case is handled below.
+        // A car obeying the hold sits exactly ON pedExit, so it must be excluded
+        // or correct yielding would be charged as a violation.
+        if(pedRoad && car.committed && car.exit===pedRoad && !car.yielded && !car.pedHeld &&
+           car.d>car.pedExit+2 && car.d<car.pedExit+CAR_L*1.2){
+          car.yielded=true;                       // charge it once, not per frame
+          pedHits++; score=Math.max(0,score-Math.abs(PED_HIT));
+          pop(car.x,car.y,PED_HIT,false); screech(); breakFlow('FAILED TO YIELD');
+          statusEl.textContent='\uD83D\uDEB6 Failure to yield in the crosswalk!';
+        }
+        if(car.d>car.stop+0.5){
+          if(!car.committed && pedRoad===car.road){
+            pedHits++; score=Math.max(0,score-Math.abs(PED_HIT));
+            pop(car.x,car.y,PED_HIT,false); screech();
+            statusEl.textContent='\uD83D\uDEB6 You nearly hit someone!';
+            pedT=0; pedRoad=null; pedWaitingRoad=null; pedEl.classList.add('hide'); pedEl.classList.remove('waiting','crossing');
+            pedNext=(PED_EVERY[0]+Math.random()*(PED_EVERY[1]-PED_EVERY[0]))/shift.peds;
+          }
+          car.committed=true;
+        }
+      }else{
+        car.stuckT=(car.stuckT||0)+dt;
+        if(!car.committed){
+          car.wait+=dt; waiting++;
+          const floodAnger=(floodStage>0 && car.road==='SE')?1.35:1;
+          car.anger=Math.min(100,Math.max(car.anger,car.wait*ANGER_RATE*floodAnger));
+          if(car.anger>75 && !car.honked && Math.random()<dt*.12){
+            car.honked=true; horns++; car.el.classList.add('mad'); honk(car.anger,1);
+            statusEl.textContent='📯 HONK! Someone is losing patience.';
+          }
+          if(car.anger>=100 && !car.melt){car.melt=true;meltdowns++;score=Math.max(0,score-80);honk(100,2);breakFlow('MELTDOWN')}
+        }
+      }
+      angerSum+=car.anger;
+      if(car.d>=car.len){
+        // Promptness pays continuously and slides through zero, so a neglected
+        // car actively costs points. Clamping at zero left a dead band where a
+        // 21s wait and a 32s wait were worth exactly the same.
+        car.dead=true; moved++; sinceClear=0;
+        // SCORING: the flow multiplier applies to the PROMPTNESS value only.
+        // Event bonuses are added flat afterwards. Previously the boat and
+        // ambulance bonuses were folded in before the multiply, so a single
+        // ambulance at x4 paid ~1,932 — more than half the three-star
+        // threshold from one car, which is what inflated whole runs past
+        // any sensible rating.
+        let base=Math.max(PER_CAR_FLOOR, CAR_BASE + PROMPT_WINDOW - car.wait);
+        let flat=0;
+        if(car.boat){
+          if(!sailed){ flat+=BOAT_BONUS; boatMade++ }
+          else { flat+=BOAT_MISS; boatMissed++ }
+        }
+        if(car.ambulance && !ambulanceResolved){
+          ambulanceResolved=true;
+          const onTime=elapsed<=ambulanceDeadline;
+          if(onTime){ setFlow(flow+EVENT_FLOW); showEvent('🚑 AMBULANCE THROUGH  ·  FLOW +'+EVENT_FLOW,1500,false); moment('🚑 CLEAR PATH!','AMBULANCE RESCUED · FLOW +'+EVENT_FLOW,1450,false,3); }
+          else breakFlow('AMBULANCE DELAYED');
+        }
+        if(base>0 && car.wait<=FLOW_WINDOW){ setFlow(flow+1); base=Math.round(base*flowMult); }
+        else if(base<=0 || car.wait>FLOW_WINDOW+10) breakFlow('SLOW FLOW');
+        if(ferryTriggered && !ferryRushDone && elapsed<SCH.FERRY+FERRY_RUSH_SECS) ferryRushCleared++;
+        if(floodStage>0 && car.road==='SE'){
+          floodCleared++;
+          if(!floodBonusDone && floodCleared>=FLOOD_TARGET){
+            floodBonusDone=true; setFlow(flow+EVENT_FLOW);
+            showEvent('🌊 HIGH WATER HERO  ·  FLOW +'+EVENT_FLOW,1700,false); moment('🌊 HIGH WATER HERO!','BEACH ROAD KEPT MOVING · FLOW +'+EVENT_FLOW,1500,false,3);
+          }
+        }
+        const worth=base+flat;
+        car.worth=worth;
+        if(worth<0) sourCars++;
+        score=Math.max(0, score+worth);
+        pop(car.x,car.y,worth,car.boat);
+      }else place(car);
+    }
+    // Only cars actually inside the junction can collide, and only with cars
+    // from a DIFFERENT approach — same-street spacing is already guaranteed by
+    // the following-distance rules above, so testing it would misfire.
+    if(!crashed){
+      const inBox=[];
+      // The window has to cover the whole paved junction, not just the box.
+      // Cars leaving on different streets still cross paths just past it, and a
+      // narrow window let them overlap without registering as a collision.
+      for(const c of cars) if(!c.dead && c.committed && c.d<=c.outStart+JUNC_EXIT) inBox.push(c);
+      for(let i=0;i<inBox.length && !crashed;i++){
+        for(let j=i+1;j<inBox.length;j++){
+          const A=inBox[i], B=inBox[j];
+          // Same-street pairs normally cannot collide — spacing guarantees it.
+          // While a street is being waved through they are tailgating, so a
+          // rear-end becomes possible. This is the cost of the risk lever.
+          const bothPushed = A.road===B.road && A.tailgating && B.tailgating;
+          if(A.road===B.road && !bothPushed) continue;
+          if(overlapping(A,B)){ crash(A,B); break }
+          // Near miss: close enough to be alarming, far enough to survive.
+          // Teaches the clearance rule without a tutorial.
+          const dx=A.x-B.x, dy=A.y-B.y, dd=dx*dx+dy*dy;
+          if(dd<NEAR_R*NEAR_R && !A.nearT && !B.nearT){
+            A.nearT=B.nearT=0.5; nearMisses++; breakFlow('CLOSE CALL');
+            A.el.classList.add('near'); B.el.classList.add('near');
+            screech();
+            statusEl.textContent='\u26A0\uFE0F Close one!';
+          }
+        }
+      }
+      for(const c of cars) if(c.nearT){
+        c.nearT-=dt;
+        if(c.nearT<=0){ c.nearT=0; c.el.classList.remove('near') }
+      }
+      if(inBox.length>0) intersectionWasBusy=true;
+      else if(intersectionWasBusy){
+        intersectionWasBusy=false; clearSweeps++;
+        const bonus=CLEAR_BONUS*flowMult; score+=bonus;
+        sweepToast('✨ CLEAN SWEEP  +'+bonus+(flowMult>1?'  ·  FLOW x'+flowMult:''));
+      }
+      if(crashed) return;
+    }
+
+    for(const c of cars) if(c.dead) c.el.remove();
+    cars=cars.filter(c=>!c.dead);
+
+    strikeEl.textContent = strikes ? '\uD83D\uDCA5'.repeat(strikes) : '';
+
+    // Live queue count per street, so relative volume is readable on screen
+    // rather than something you have to infer from a churning map.
+    const queued={}, boatQ={}, roadAnger={};
+    for(const r of roads){ queued[r]=0; boatQ[r]=0; roadAnger[r]=0 }
+    let boatLeft=0;
+    for(const c of cars){
+      if(!c.committed){ queued[c.road]++; roadAnger[c.road]=Math.max(roadAnger[c.road],c.anger); }
+      if(c.boat && !c.dead && !sailed){ boatLeft++; if(!c.committed) boatQ[c.road]++ }
+    }
+    for(const r of roads){
+      const pressure=Math.max(queued[r]/CAP_OF[r], roadAnger[r]/100);
+      const g=gateEl[r];
+      if(!g) continue;
+      g.setAttribute('stroke', pressure>=.72?'#c9503f' : pressure>=.45?'#e7a23b' : '#6f9e5f');
+      g.setAttribute('stroke-width', String(9+pressure*9));
+      g.style.opacity = pressure<=.06 ? 0 : Math.min(.92, .3+pressure*0.75);
+    }
+    if(SHOW_PILLS) for(const r of roads){
+      const pressure=Math.max(queued[r]/CAP_OF[r],roadAnger[r]/100);
+      const mood=pressure>=.78?'🤬':pressure>=.55?'😠':pressure>=.32?'😐':'🙂';
+      countEl[r].textContent=mood+' '+queued[r];
+      labelEl[r].classList.toggle('busy', pressure>=.55);
+      labelEl[r].classList.toggle('warn', pressure>=.55 && pressure<.78);
+      labelEl[r].classList.toggle('critical', pressure>=.78);
+      labelEl[r].classList.toggle('flooded',r==='SE'&&floodStage>0);
+      boatCountEl[r].textContent = boatQ[r] ? '\u26F4\uFE0F'+boatQ[r] : '';
+      boatCountEl[r].classList.toggle('none', !boatQ[r]);
+    }
+    // "Perfect Five Corners" lived here: a 650-point award behind six
+    // simultaneous conditions. Nobody could perceive it as a skill, and it
+    // pulled the opposite way to Clear Sweeps — one paid for letting a jam
+    // build, the other for never letting one form. Removed.
+    boatEl.textContent = sailed ? '' : (boatLeft ? '\u26F4\uFE0F '+boatLeft+' to go' : '');
+
+    // ---- Event chips ----
+    // Throttled: these are ~30 DOM writes for values a player reads a few times
+    // a second, and on a phone they were competing with the cars for frame time.
+    hudTick++;
+    if(chipFlow && hudTick%HUD_EVERY===0){
+    flowBadge.textContent=flowMult;
+    flowBadge.classList.toggle('warn',flowMult===1);
+    chipFlow.classList.toggle('on',flowMult>1);
+
+    const wIcon=floodStage>=2?'\uD83C\uDF0A':floodStage===1?'\uD83C\uDF0A':elapsed>=SCH.RAIN?'\uD83C\uDF27\uFE0F':'\u2600\uFE0F';
+    const wName=floodStage===3?'DEEP':floodStage===2?'HIGH':floodStage===1?'FLOOD':elapsed>=SCH.RAIN?'RAIN':'DRY';
+    chipWeather.firstChild.textContent=wIcon;
+    chipWeatherLabel.textContent=wName;
+    chipWeather.classList.toggle('on',elapsed>=SCH.RAIN);
+    chipWeather.classList.toggle('alert',floodStage>=2);
+    weatherBadge.textContent=floodStage||'';
+    weatherBadge.classList.toggle('hide',!floodStage);
+    weatherBadge.classList.toggle('warn',floodStage>=2);
+
+    chipBoat.classList.toggle('on',!sailed && (ferryTriggered||boatLeft>0));
+    boatBadge.textContent=boatLeft;
+    boatBadge.classList.toggle('hide',sailed||!boatLeft);
+    boatBadge.classList.toggle('warn',!sailed && boatLeft>0 && SCH.SAIL-elapsed<14);
+
+    const pedPending=(pedRoad?1:0)+(pedWaitingRoad?1:0);
+    chipPed.classList.toggle('on',pedPending>0);
+    chipPed.classList.toggle('alert',!!pedWaitingRoad && pedWait>7);
+    pedBadge.textContent=pedPending||'';
+    pedBadge.classList.toggle('hide',!pedPending);
+    pedBadge.classList.toggle('warn',!!pedWaitingRoad && pedWait>7);
+    }
+
+    // Was average driver anger — a flavour statistic that moved out of step with
+    // the actual fail condition. The meter now reads JAM PRESSURE: how close the
+    // stopped-car count is to the gridlock limit, which is what ends the shift.
+    const jam=Math.min(100, waiting/JAM_LIMIT*100);
+    temperFace.textContent = jam<30?'🙂':jam<55?'😐':jam<80?'😠':'🤬';
+    temperFill.style.width=Math.max(6,jam)+'%';
+    temperFill.style.background=jam<40?'#67b26f':jam<70?'#e7a23b':'#d9544d';
+    temperPlaque.classList.toggle('critical', jam>=85);
+    scoreEl.textContent=Math.floor(score);
+
+    // A momentary spike — a ferry surge landing, a hold releasing — is not
+    // gridlock. The count has to stay over the line for JAM_HOLD seconds.
+    if(waiting>peakQueued) peakQueued=waiting;
+    if(waiting>JAM_LIMIT) jamT+=dt; else jamT=0;
+    if(jamT>=JAM_HOLD || meltdowns>=8){ end('gridlock'); return }
+    if(!endless && remain<=0){ end('time'); return }
+    requestAnimationFrame(update);
+  }
+
+  function reset(){
+    for(const c of cars) c.el.remove();
+    cars=[]; active=null; score=0; moved=0; sourCars=0; meltdowns=0; horns=0;
+    acc=0; jamT=0; peakQueued=0; greenT=0; sinceClear=0; burstT=9; lastTap=0; wave=0; waveT=0; newRecord=false; sailed=false; blockedT=0; wreckCars=[]; pedT=0; pedNext=6; pedRoad=null; pedWaitingRoad=null; pedWait=0; pedPenalty=false; pedBase=null; pedPerp=null; pedHits=0; pedCrossed=0; pedPoints=0; happyPeds=0; boatTotal=0; boatMade=0; boatMissed=0; strikes=0; nearMisses=0; ferryTriggered=false; last=0;
+    crashed=false; crashPair=null; spawnAcc=0; document.getElementById('fx').innerHTML=''; setFlow(0); maxFlow=0; lastFlowMult=1; intersectionWasBusy=false; clearSweeps=0; collisions=0; ferryRushCleared=0; ferryRushDone=false; ferryWarnShown=-1; ambulanceTriggered=false; ambulanceResolved=false; ambulanceCar=null; ambulanceDeadline=0; floodStage=0; floodCleared=0; floodBonusDone=false; lastFloodStage=0; rainAnnounced=false; eventBanner.classList.remove('show','danger'); if(momentEl) momentEl.classList.remove('show','danger','teach'); if(flowCall) flowCall.classList.remove('show'); if(sweepNote) sweepNote.classList.remove('show'); if(readyOverlay) readyOverlay.classList.add('hide'); if(coachEl) coachEl.classList.remove('show');
+    for(const r of roads) if(gateEl[r]) gateEl[r].style.opacity=0;
+    floodPath.setAttribute('class','floodwater'); rainOverlay.classList.remove('on','heavy'); weatherHud.classList.remove('wet','high'); weatherHud.textContent='☀️ DRY';
+    pedEl.classList.add('hide'); pedEl.classList.remove('waiting','crossing','stepping'); pedEl.textContent='🚶'; guardEl.style.transform='rotate(0deg)'; guardEl.classList.remove('rain','celebrate','alert','pedwave','wave');
+    ferryMsg.textContent='⛴️ Ferry in 0:'+Math.round(SCH.FERRY);
+    scoreEl.textContent='0'; temperFill.style.width='6%'; if(temperPlaque) temperPlaque.classList.remove('critical');
+    for(const r of roads) glowEl[r].classList.remove('on','warn');
+    if(stopZone) stopZone.classList.remove('on');
+    document.getElementById('overlay').classList.add('hide');
+    tip.classList.add('hide'); statusEl.textContent='Tap a road to begin';
+  }
+  // Deals the opening traffic and paints it, but leaves the clock stopped. The
+  // shift does not begin until go() — a 90-second timer that starts while the
+  // player is still reading the board is 90 seconds of guessing.
+  function start(){
+    shift=SHIFTS[shiftIx];
+    SCH=rollSchedule();
+    subEl.textContent='Vineyard Haven';
+    shiftSubEl.textContent=shift.name;
+    reset(); running=false; startTime=performance.now();
+    score = endless ? 0 : carry;
+    startedWith = score;
+    crashWarned = endless || shiftIx>0;   // free pass on Morning Boat only
+    scoreEl.textContent=Math.floor(score);
+    for(let i=0;i<START_TOTAL;i++) spawn(weightedRoad(shift.mix),false);
+    // spawnBase puts new arrivals at least 140 units back from the line, which
+    // is right for traffic that drives in during play but leaves the opening
+    // board looking empty. Pull the opening deal forward into a real queue.
+    for(const r of roads){
+      const q=cars.filter(c=>c.road===r).sort((a,b)=>b.d-a.d);
+      q.forEach(function(c,i){
+        c.d=Math.min(c.stop, stopAt[r]-i*GAP);
+        c.lastD=undefined; place(c);
+      });
+    }
+    // Fill the queue pills so the opening board reads correctly while held.
+    if(readyShift) readyShift.textContent = endless ? 'ENDLESS' : shift.name;
+    const goalHost=document.getElementById('readyGoals');
+    if(goalHost){
+      goalHost.classList.toggle('hide',endless);
+      if(!endless) goalHost.innerHTML='<div class="goalHead">Goals \u00b7 +'+GOAL_BONUS+' each</div>'+
+        goalsFor(shiftIx).map(function(g){ return '<div class="goal">\u25CB '+g.text+'</div>' }).join('');
+    }
+    if(readyRule) readyRule.textContent = endless
+      ? 'No clock. Waves keep building until you drop it.'
+      : (shift.rule||'Traffic is already queued.');
+    readyAt=performance.now();
+    if(readyOverlay) readyOverlay.classList.remove('hide');
+  }
+  function go(e){
+    if(e){ e.preventDefault(); e.stopPropagation(); }
+    if(running) return;
+    // Safari can deliver the PLAY tap's own pointerup to the panel that tap just
+    // revealed, which would start the clock on the same touch. Ignore anything
+    // arriving in the first fraction of a second.
+    if(performance.now()-readyAt<400) return;
+    if(readyOverlay) readyOverlay.classList.add('hide');
+    tip.classList.add('hide');
+    running=true; last=0; acc=0; startTime=performance.now();
+    lifetimePlays++; try{localStorage.setItem(PLAY_KEY,String(lifetimePlays))}catch(e2){}
+    if(lifetimePlays<=2) setTimeout(()=>coach('<b>Tap any road</b> to wave it through, then move on before it backs up.',2400),500);
+    try{ initAudio() }catch(e2){}
+    requestAnimationFrame(update);
+  }
+  function end(outcome){
+    running=false;
+    // Records persist between sessions — the point of an arcade score.
+    if(endless){
+      if(score>best.endless){ best.endless=Math.round(score); best.wave=wave+1; newRecord=true }
+    }else if(score>best.campaign){ best.campaign=Math.round(score); newRecord=true }
+    saveBest();
+    const completedShift=shiftIx;
+    let carryNext=false;
+    const titles={time:'SHIFT COMPLETE',gridlock:'FIVE CORNERS GRIDLOCKED',crash:'THREE STRIKES'};
+    document.getElementById('endTitle').textContent=titles[outcome]||'SHIFT OVER';
+    if(outcome==='time'){
+      score+=500;
+      if(shiftIx<SHIFTS.length-1){ shiftIx++; againBtn.textContent='NEXT: '+SHIFTS[shiftIx].name; carryNext=true }
+      else { shiftIx=0; carryNext=false; carry=0; againBtn.textContent='NEW DAY · '+SHIFTS[0].name }
+    }else againBtn.textContent='TRY AGAIN · '+shift.name;
+
+    // Goals are settled BEFORE anything is totalled, so the bonus reaches the
+    // score, the day carry, the star rating and the leaderboard alike.
+    let goalsHtml='', goalsMet=0;
+    if(!endless){
+      const snap={collisions:collisions,boatTotal:boatTotal,boatMade:boatMade,
+                  pedCrossed:pedCrossed,pedHits:pedHits,peakQueued:peakQueued,
+                  flowMult:flowMult,maxFlow:maxFlow};
+      goalsHtml='<div class="goalsBox">'+goalsFor(completedShift).map(function(g){
+        const ok=!!g.test(snap); if(ok) goalsMet++;
+        return '<div class="goal '+(ok?'met':'miss')+'">'+(ok?'\u2713':'\u25CB')+' '+g.text+
+               (ok?' <b>+'+GOAL_BONUS+'</b>':'')+'</div>';
+      }).join('')+'</div>';
+      score+=GOAL_BONUS*goalsMet;
+    }
+
+    // Stars rate THIS shift's work; the big number is the day so far.
+    const dayTotal=Math.floor(score);
+    const final=endless?dayTotal:Math.max(0,dayTotal-Math.floor(startedWith));
+    const stars=STAR_THRESHOLDS.filter(v=>final>=v).length;
+    document.getElementById('finalScore').textContent=dayTotal.toLocaleString();
+    // Two different numbers live on this screen — the day so far, and what this
+    // shift alone earned. The stars rate the shift, so both are labelled: an
+    // unlabelled 6,022 above "2,288 points to 3 stars" reads as broken maths.
+    const totalLabel=document.getElementById('totalLabel');
+    if(totalLabel) totalLabel.textContent = endless ? 'RUN SCORE' : 'DAY TOTAL';
+    document.getElementById('starsLine').textContent='★'.repeat(stars)+'☆'.repeat(MAX_STARS-stars);
+    if(carryNext) carry=dayTotal;      // banked after goals, not before
+    const shiftLine=document.getElementById('shiftLine');
+    if(shiftLine){
+      shiftLine.classList.toggle('hide',endless);
+      if(!endless) shiftLine.textContent=shift.name+' · THIS SHIFT +'+final.toLocaleString()+
+        (outcome==='time'?' (incl. +500 for finishing)':'');
+    }
+    const nextTarget=document.getElementById('nextTarget');
+    if(nextTarget){
+      if(stars<MAX_STARS){ const target=STAR_THRESHOLDS[stars]; nextTarget.textContent=(target-final).toLocaleString()+' points to '+(stars+1)+'★'+(endless?'':' this shift'); }
+      else nextTarget.textContent='★'.repeat(MAX_STARS)+' MASTERED · chase a new best';
+    }
+    // Per-shift record, kept alongside the mode records above.
+    const bestKey='fiveCorners.shift.'+(endless?'endless':completedShift);
+    let oldBest=0;
+    try{ oldBest=Number(localStorage.getItem(bestKey)||0); if(final>oldBest) localStorage.setItem(bestKey,String(final)); }catch(e){}
+    const shiftBest=Math.max(oldBest,final);
+    // Progression still needs a completed clock, but a bad run should not trap
+    // the player on one shift — they can move on if they would rather.
+    if(skipBtn){
+      const canSkip = !endless && outcome!=='time' && shiftIx<SHIFTS.length-1;
+      skipBtn.classList.toggle('hide',!canSkip);
+      if(canSkip) skipBtn.textContent='SKIP TO: '+SHIFTS[shiftIx+1].name;
+    }
+    const rank=recordScore(final, endless?('Endless · wave '+(wave+1)):shift.name, stars);
+    const bl=document.getElementById('bestLine');
+    if(bl){
+      bl.textContent=(final>oldBest?'NEW BEST · ':'BEST · ')+shiftBest.toLocaleString()+
+        (rank>=0?'   ·   #'+(rank+1)+' ALL TIME':'');
+    }
+    // Nine stacked lines needed a scroll on every phone. Same figures, packed
+    // four to a row as unbreakable chips, and the "Shift report" header dropped
+    // — the panel it sits in already says what it is.
+    const stat=function(s){ return '<span class="stat">'+s+'</span>' };
+    // "Traffic never stacked up" used to be awarded off maxFlow, which measures
+    // a streak of prompt clears, not queue length — so it could appear after a
+    // run that had jammed solid. It is now gated on the actual worst backup.
+    const hero=peakQueued<=CALM_BACKUP?'Traffic never stacked up'
+      :boatMade&&boatMade===boatTotal&&boatTotal>0?'Nobody missed the boat'
+      :happyPeds>=3?'Pedestrians loved you'
+      :maxFlow>=12?'You kept them rolling'
+      :'Keep the island moving';
+    let html='<div class="heroLine">'+hero+'</div>';
+    const pre=[];
+    if(endless) pre.push(stat('\uD83C\uDFC1 Reached <b>wave '+(wave+1)+'</b>'));
+    if(outcome==='crash' && crashPair) pre.push(stat('💥 '+crashPair[0]+' met '+crashPair[1]));
+    if(pre.length) html+=pre.join(' · ')+'<br>';
+    html+=goalsHtml;
+    html+=[stat('\uD83D\uDE97 Moved: <b>'+moved+'</b>'+(sourCars?' (<b>'+sourCars+'</b> sour)':'')),
+           stat('\u26F4\uFE0F Boat: <b>'+boatMade+'/'+boatTotal+'</b>'),
+           stat('\u26A0\uFE0F Close calls: <b>'+nearMisses+'</b>'),
+           stat('\uD83D\uDCA5 Collisions: <b>'+collisions+'</b>'),
+           stat('\uD83D\uDEA6 Worst backup: <b>'+peakQueued+'</b>')].join(' · ')+'<br>'+
+          [stat('🚶 Crossed: <b>'+pedCrossed+'</b> +<b>'+pedPoints+'</b>'+(pedHits?' · hit <b>'+pedHits+'</b>':'')),
+           stat('😊 Quick: <b>'+happyPeds+'</b>'),
+           stat('✨ Sweeps: <b>'+clearSweeps+'</b>'),
+           stat('🔥 Best flow: <b>'+maxFlow+'</b>')].join(' · ')+'<br>'+
+          [stat('🚑 Ambulance: <b>'+(ambulanceTriggered?(ambulanceResolved?'Resolved':'Missed'):'—')+'</b>'),
+           stat('🌊 High water: <b>'+floodCleared+'/'+FLOOD_TARGET+(floodBonusDone?' ✓':'')+'</b>'),
+           stat('\uD83D\uDCEF Horns: <b>'+horns+'</b>'),
+           stat('\uD83E\uDD2C Meltdowns: <b>'+meltdowns+'</b>')].join(' · ');
+    document.getElementById('results').innerHTML=html;
+    const reveal=function(){document.getElementById('overlay').classList.remove('hide')};
+    // Let the wreck sit on screen for a beat before the game-over panel.
+    if(outcome==='crash') setTimeout(reveal,1100); else reveal();
+  }
+
+  let readyAt=0;
+  const scoresOverlay=document.getElementById('scoresOverlay');
+  function openScores(e){
+    if(e){ e.preventDefault(); e.stopPropagation(); }
+    renderScores(-1);
+    if(scoresOverlay) scoresOverlay.classList.remove('hide');
+  }
+  function closeScores(e){
+    if(e){ e.preventDefault(); e.stopPropagation(); }
+    if(scoresOverlay) scoresOverlay.classList.add('hide');
+  }
+  ['scoresBtn','scoresBtn2'].forEach(function(id){
+    const b=document.getElementById(id);
+    if(!b) return;
+    b.addEventListener('click',openScores);
+    b.addEventListener('touchend',openScores,{passive:false});
+  });
+  (function(){
+    const c=document.getElementById('scoresClose');
+    if(!c) return;
+    c.addEventListener('click',closeScores);
+    c.addEventListener('touchend',closeScores,{passive:false});
+  })();
+  const readyOverlay=document.getElementById('readyOverlay');
+  const readyShift=document.getElementById('readyShift');
+  const readyRule=document.getElementById('readyRule');
+  const goBtn=document.getElementById('goBtn');
+  const againBtn=document.getElementById('again');
+  const skipBtn=document.getElementById('skip');
+  const startOverlay=document.getElementById('startOverlay');
+  const startBtn=document.getElementById('startBtn');
+  let launched=false;
+  function launch(e){
+    if(e) e.preventDefault();
+    if(launched) return; launched=true;
+    // Start the shift FIRST. initAudio() used to run ahead of it, unguarded, so
+    // any Web Audio failure on the device meant PLAY silently did nothing.
+    startOverlay.classList.add('hide');
+    try{ start() }
+    catch(err){
+      launched=false;
+      startOverlay.classList.remove('hide');
+      const bar=document.getElementById('errbar');
+      bar.classList.remove('hide');
+      bar.textContent='start() FAILED\n'+((err&&err.stack)||err);
+      return;
+    }
+    // Still inside the same user gesture, so iOS will still unlock audio.
+    try{ initAudio() }catch(e2){}
+  }
+  const endlessBtn=document.getElementById('endlessBtn'), bestLine=document.getElementById('titleBest');
+  function showBest(){
+    const bits=[];
+    if(best.campaign) bits.push('Shift best '+best.campaign.toLocaleString());
+    if(best.endless)  bits.push('Endless best '+best.endless.toLocaleString()+(best.wave?' · wave '+best.wave:''));
+    bestLine.textContent=bits.join('   ·   ');
+  }
+  showBest();
+  // Diagnostics: tap the title plaque to toggle. Reports what the device is
+  // actually doing, rather than what the code assumes it is doing.
+  const diagEl=document.getElementById('diag');
+  let diagOn=false, fpsAcc=0, fpsN=0, fpsWorst=0, fpsShown=0, diagT=0;
+  const titlePlaque=document.getElementById('titlePlaque');
+  if(titlePlaque) titlePlaque.addEventListener('click',function(e){
+    e.stopPropagation(); diagOn=!diagOn; diagEl.classList.toggle('hide',!diagOn);
+  });
+  titlePlaque.style.pointerEvents='auto';
+  function diagFrame(rawMs){
+    if(!diagOn) return;
+    fpsAcc+=rawMs; fpsN++; if(rawMs>fpsWorst) fpsWorst=rawMs;
+    diagT+=rawMs;
+    if(diagT<400) return;
+    const avg=fpsAcc/fpsN;
+    fpsShown=Math.round(1000/avg);
+    const a=actx?actx.state:'none';
+    diagEl.textContent=
+      'build '+BUILD+'\n'+
+      'fps '+fpsShown+'   frame '+avg.toFixed(1)+'ms   worst '+fpsWorst.toFixed(0)+'ms\n'+
+      'cars '+cars.length+'   dpr '+(window.devicePixelRatio||1)+'\n'+
+      'view '+Math.round(window.innerWidth)+'x'+Math.round(window.innerHeight)+'\n'+
+      'audio '+a+'   muted '+muted;
+    fpsAcc=0; fpsN=0; fpsWorst=0; diagT=0;
+  }
+  // Sprint 10b: keep launch events on the buttons only. The previous build also
+  // listened on the entire overlay for click/pointerup/touchend; on iPhone that
+  // could route one tap through multiple event paths. A continuously transforming
+  // pulse animation on the button made hit-testing less reliable as well.
+  function startCampaign(e){ if(e){e.preventDefault();e.stopPropagation();} endless=false; if(shiftIx===0) carry=0; launch(); }
+  function startEndless(e){ if(e){e.preventDefault();e.stopPropagation();} endless=true; launch(); }
+  startBtn.addEventListener('click',startCampaign);
+  endlessBtn.addEventListener('click',startEndless);
+  // touchend is retained explicitly for older iOS/WebView contexts where a click
+  // may be delayed or suppressed. launch() is guarded, so duplicate delivery is safe.
+  startBtn.addEventListener('touchend',startCampaign,{passive:false});
+  endlessBtn.addEventListener('touchend',startEndless,{passive:false});
+  // Last resort: if neither click nor touchend is delivered to the button (an
+  // in-app browser, a stray overlay, a mis-sized hit box), resolve the tap
+  // against the buttons' own rectangles. launch() is idempotent, so a tap that
+  // arrives by two routes still starts exactly one shift.
+  startOverlay.addEventListener('pointerup',function(e){
+    if(launched) return;
+    if(scoresOverlay && !scoresOverlay.classList.contains('hide')) return;
+    const hit=function(el){
+      const b=el.getBoundingClientRect();
+      return e.clientX>=b.left-6 && e.clientX<=b.right+6 && e.clientY>=b.top-6 && e.clientY<=b.bottom+6;
+    };
+    if(hit(startBtn)) startCampaign(e);
+    else if(hit(endlessBtn)) startEndless(e);
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.key!=='Enter' && e.key!==' ' && e.key!=='Spacebar') return;
+    if(scoresOverlay && !scoresOverlay.classList.contains('hide')){ closeScores(e); return }
+    if(!startOverlay.classList.contains('hide')){ if(!launched) startCampaign(e); return }
+    if(readyOverlay && !readyOverlay.classList.contains('hide')) go(e);
+  });
+  if(goBtn){
+    goBtn.addEventListener('click',go);
+    goBtn.addEventListener('touchend',go,{passive:false});
+  }
+  // Anywhere on the dimmed panel works too — one less thing to aim at.
+  if(readyOverlay) readyOverlay.addEventListener('pointerup',go);
+  // Build stamp lives in the diagnostics panel only (tap the title plaque).
+  againBtn.onclick=function(){launched=false;showBest();launch()};
+  if(skipBtn) skipBtn.onclick=function(){
+    if(shiftIx<SHIFTS.length-1) shiftIx++;
+    launched=false; showBest(); launch();
+  };
+  window.__fcReady=true;
+})();
+</script>
+</body>
+</html>

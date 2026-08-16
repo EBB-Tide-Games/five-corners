@@ -232,6 +232,8 @@
   #readyHow.hide{display:none!important}
   /* Distinct gold treatment: this is the reward for finishing Last Boat once,
      not just another mode alongside Endless. */
+  #startBtn,#endlessBtn,#finaleBtn{width:min(78vw,300px);min-width:0;margin-top:12px}
+  #startBtn{margin-top:0}
   #finaleBtn,#finaleBtn2{background:linear-gradient(#f6b656,#e09a34);color:#13242b;
     border:2px solid #ffd7a0;box-shadow:0 4px 0 #a86f1c,0 6px 14px #0007}
   /* Locked to the same footprint as the button above it (PLAY AGAIN / NEW DAY),
@@ -790,7 +792,7 @@
     <div class="logo">FIVE<br>CORNERS</div><div class="mv">VINEYARD HAVEN, MASSACHUSETTS</div>
     <div class="how"><strong>You’re the crossing guard at Martha’s Vineyard’s notorious Five Corners.</strong><br>Keep the island moving.</div>
     <button id="startBtn">PLAY SHIFT</button>
-    <button id="endlessBtn" class="ghost">ENDLESS</button>
+    <button id="endlessBtn">ENDLESS</button>
     <button id="finaleBtn" class="hide">🎉 AUGUST SATURDAY</button>
     <button id="trainBtn" class="ghost">TRAINING SHIFT</button>
     <div id="titleLinks">
@@ -824,7 +826,7 @@
   try{ const raw=localStorage.getItem(BEST_KEY); if(raw) best=Object.assign(best,JSON.parse(raw)) }catch(e){}
   function saveBest(){ try{ localStorage.setItem(BEST_KEY,JSON.stringify(best)) }catch(e){} }
 
-  const BUILD='s28d · 2026-08-15';
+  const BUILD='s29a · 2026-08-15';
   // Every roll in the game goes through rnd(). Left alone it is Math.random();
   // seeded, it makes a run reproducible — which is what lets everybody play the
   // same traffic on the same day and compare honestly.

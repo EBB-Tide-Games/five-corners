@@ -99,11 +99,25 @@
      type had to be so small to fit. */
   footer{position:relative;flex:0 0 auto;min-height:0;background:transparent;
           padding:4px 9px calc(env(safe-area-inset-bottom) + 6px);z-index:12;display:grid;
-          grid-template-columns:auto auto 1fr;gap:6px 7px;align-items:end;font-size:12px;pointer-events:none}
+          grid-template-columns:auto 1fr auto auto;gap:6px 7px;align-items:end;font-size:12px;pointer-events:none}
   #msgSlot{grid-column:1 / -1;grid-row:1}
   #scorePlaque{grid-column:1;grid-row:2}
-  #temperPlaque{grid-column:2;grid-row:2}
-  footer #mute{grid-column:3;grid-row:2;justify-self:end}
+  #temperPlaque{grid-column:2;grid-row:2;justify-self:start}
+  footer #mute{grid-column:4;grid-row:2;justify-self:end}
+  /* It was a ghost button — a hairline outline on a dark footer, which reads as
+     a label rather than something to press. Given as a solid plaque with a
+     pressed-in edge, in the game's own gold, so it is unmistakably a control. */
+  /* Column 2 is wide, so centring left it stranded mid-footer. Pushed to the
+     end of its column it sits right against the mute button. */
+  #quitTrain{grid-column:3;grid-row:2;justify-self:end;align-self:end;
+    width:auto;min-width:0;margin:0;padding:9px 16px;
+    font-size:12px;font-weight:900;letter-spacing:1.4px;
+    border-radius:12px;border:2px solid #ffd7a0;
+    background:linear-gradient(#f6b656,#e09a34);color:#13242b;
+    box-shadow:0 4px 0 #a86f1c, 0 6px 14px #0007;
+    text-transform:uppercase;pointer-events:auto}
+  #quitTrain:active{transform:translateY(3px);box-shadow:0 1px 0 #a86f1c, 0 3px 8px #0007}
+  #quitTrain.hide{display:none!important}
   /* Four status chips used to sit here. The space they freed is now where the
      event messages land, instead of over the middle of the junction. */
   footer > *{pointer-events:auto}
@@ -511,7 +525,7 @@
       <div class="sub" id="shiftSub">Morning Boat</div>
     </div>
     <div class="plaque hud" id="clockPlaque">
-      <div class="temper">Time</div>
+      <div class="temper" id="clockLabel">Time</div>
       <div class="time" id="clock">1:30</div>
     </div>
     <div id="sweepNote"></div>
@@ -593,6 +607,7 @@
       <div id="meter"><div class="fill" id="temperFill"></div></div>
       <div id="temperFace">🙂</div>
     </div>
+    <button id="quitTrain" class="hide">END LESSON</button>
     <div id="msgSlot">
       <div id="eventBanner"></div>
       <div id="moment"></div>
@@ -723,6 +738,7 @@
     <div class="how"><strong>You are the crossing guard.</strong></div>
     <button id="startBtn">PLAY SHIFT</button>
     <button id="endlessBtn" class="ghost">ENDLESS</button>
+    <button id="trainBtn" class="ghost">TRAINING SHIFT</button>
     <button id="scoresBtn" class="ghost">TOP TEN</button>
     <button id="scoringBtn" class="ghost">SCORING</button>
     <button id="aboutBtn" class="ghost">ABOUT</button>
@@ -750,7 +766,7 @@
   try{ const raw=localStorage.getItem(BEST_KEY); if(raw) best=Object.assign(best,JSON.parse(raw)) }catch(e){}
   function saveBest(){ try{ localStorage.setItem(BEST_KEY,JSON.stringify(best)) }catch(e){} }
 
-  const BUILD='s20 · 2026-08-15';
+  const BUILD='s21f · 2026-08-15';
   // Every roll in the game goes through rnd(). Left alone it is Math.random();
   // seeded, it makes a run reproducible — which is what lets everybody play the
   // same traffic on the same day and compare honestly.
@@ -761,6 +777,14 @@
   // Declared up here because weightedRoad() and reset() both read it, and
   // those run while the map is still being built.
   let closedRoad=null;
+  // A training shift: light traffic, no clock pressure, nothing that can end a
+  // run. It teaches by escalation rather than by a card of rules — each step
+  // waits for the player to actually perform the action before moving on.
+  let training=false, tStep=0, tHold=0;
+  const trainFlags={switched:false, waved:false, stopped:false};
+  const TRAIN_SHIFT={name:'TRAINING', rate:[0.5,0.5,0.5], mix:{SE:26,W:24,S:18,N:20,E:12},
+                     sail:9999, peds:1, green:1.7, hazards:0,
+                     rule:'Learn the junction. Nothing here can go wrong.'};
   // ---- Top ten -------------------------------------------------------------
   // Every finished run is logged, win or lose, and the list is kept sorted so
   // rendering is just a read. Local to this device — see notes on going global.
@@ -948,6 +972,12 @@
     // source, then two, then three — and only the later shifts get the CRUNCH,
     // where hazards are pulled deliberately toward the sailing instead of being
     // spread away from it. Endless always runs everything.
+    if(training){
+      s.hasFlood=s.hasAmb=s.hasRush=false;
+      s.FLOOD=s.HIGH=s.DEEP=s.AMB=s.RAIN=s.RAMP=9999;
+      s.FERRY=9999; s.SAIL=9999; s.WALKER=0; s.PEDMUL=1;
+      return s;
+    }
     const want = endless ? 3 : ((SHIFTS[shiftIx]||{}).hazards || 3);
     const forced = (!endless && shift && shift.force) ? shift.force : null;
     const pool = ['rush','ambulance','flood'].filter(function(h){ return h!==forced });
@@ -1648,7 +1678,7 @@
   const appEl=document.getElementById('app');
   const scoreEl=document.getElementById('score'), temperText=document.getElementById('temperText'), temperFill=document.getElementById('temperFill');
   const temperPlaque=document.getElementById('temperPlaque');
-  const clock=document.getElementById('clock'), statusEl=document.getElementById('status'), tip=document.getElementById('tip');
+  const clock=document.getElementById('clock'), clockLabel=document.getElementById('clockLabel'), statusEl=document.getElementById('status'), tip=document.getElementById('tip');
   const ferryMsg=document.getElementById('ferryMsg'), carLayer=document.getElementById('carLayer');
   const pedEl=document.getElementById('ped'), strikeEl=document.getElementById('strikes');
   const subEl=document.getElementById('sub'), shiftSubEl=document.getElementById('shiftSub'), boatEl=document.getElementById('boatHud');
@@ -1805,6 +1835,7 @@
     clearTimeout(sweepToast.t); sweepToast.t=setTimeout(function(){sweepNote.classList.remove('show')},1200);
   }
   function coach(text,ms=2200){
+    if(training) return;   // the lesson owns this element while it is running
     if(lifetimePlays>2 || !coachEl) return;
     coachEl.innerHTML=text; coachEl.classList.add('show'); clearTimeout(coach.t); coach.t=setTimeout(()=>coachEl.classList.remove('show'),ms);
   }
@@ -2240,7 +2271,7 @@
     }
     strikes++;
     if(CRASH_COST>0){ score=Math.max(0,score-CRASH_COST); pop((a.x+b.x)/2,(a.y+b.y)/2,-CRASH_COST,false) }
-    if(strikes>=MAX_STRIKES){
+    if(strikes>=MAX_STRIKES && !training){
       crashed=true;
       statusEl.textContent='\uD83D\uDCA5 THIRD COLLISION — SHIFT OVER';
       end('crash');
@@ -2290,6 +2321,66 @@
   // Endless used to be one dial: more arrivals. Difficulty as a volume knob is
   // the least interesting kind. Waves now shorten the green as well, so the
   // rhythm changes rather than only the load.
+  // Each step waits for the player to DO the thing. No timers, no next button:
+  // the only way forward is to perform the action, which is the whole point of
+  // teaching by escalation instead of by a card of rules.
+  const TRAIN=[
+    {say:'<b>Tap any road</b> to wave its traffic through.',
+     done:function(){ return active!==null }},
+    {say:'The ring round the guard is <b>red while cars are still crossing</b>. Wait for it to go green, then tap a different road.',
+     done:function(){ return trainFlags.switched }},
+    {say:'<b>Press and hold</b> a road to wave them through fast. Watch the ring drain \u2014 the arm tires.',
+     done:function(){ return trainFlags.waved }},
+    {say:'<b>Tap the guard</b> in the middle to stop everything at once.',
+     done:function(){ return trainFlags.stopped }},
+    {say:'A <b>yellow car</b> has a boat to catch. Get it through.',
+     enter:function(){ spawn(weightedRoad(shift.mix), true) },
+     done:function(){ return boatMade>0 || boatMissed>0 }},
+    {say:'Someone wants to cross. <b>Wave them over</b> before they step out on their own.',
+     enter:function(){ pedNext=0 },
+     done:function(){ return pedCrossed>0 || pedHits>0 }},
+    {say:"<b>That's the job.</b> Clear cars promptly and your FLOW multiplier climbs \u2014 everything scores more.",
+     done:function(){ return tHold>3.4 }}
+  ];
+  function trainSay(html){
+    if(!coachEl) return;
+    coachEl.innerHTML=html;
+    coachEl.classList.add('show');
+  }
+  function trainStep(dt){
+    if(tStep>=TRAIN.length){ finishTraining(); return }
+    const st=TRAIN[tStep];
+    if(!st._shown){
+      st._shown=true; tHold=0;
+      if(st.enter) try{ st.enter() }catch(e){}
+      trainSay(st.say);
+    }
+    tHold+=dt;
+    // Watchdog. A lesson step waits on the player DOING something, and some of
+    // those can become impossible — a wrecked ferry car increments neither the
+    // made nor the missed counter, which would strand the lesson forever. After
+    // half a minute the step gives up and moves on rather than trapping anyone.
+    if(tHold>30){ tStep++; tHold=0; trainSay('No matter \u2014 moving on.'); return }
+    if(tHold>0.5 && st.done()){
+      tStep++;
+      if(tStep<TRAIN.length){ whistle('go'); }
+      tHold=0;
+    }
+  }
+  function finishTraining(){
+    running=false; training=false; launched=false;
+    if(quitTrain) quitTrain.classList.add('hide');
+    if(temperPlaque) temperPlaque.classList.remove('hide');
+    // The hint flags were consumed while the lesson was suppressing them; clear
+    // them so a first real shift still gets its in-game prompts.
+    for(const k in coached) coached[k]=false;
+    appEl.classList.remove('playing');
+    if(coachEl) coachEl.classList.remove('show');
+    for(const c of cars.slice()) if(c.el) c.el.remove();
+    cars.length=0;
+    startOverlay.classList.remove('hide');
+    statusEl.textContent='Training complete';
+  }
   function greenLife(){
     const waveTrim = endless ? Math.max(0.62, 1-wave*0.055) : 1;
     return GREEN_LIFE*((shift&&shift.green)||1)*waveTrim;
@@ -2298,6 +2389,7 @@
   // deadlocks the map. Nothing new enters.
   function allStop(){
     if(!running) return;
+    if(training) trainFlags.stopped=true;
     junctionBusy=false;
     for(const r of roads) glowEl[r].classList.remove('on','warn');
     if(stopZone) stopZone.classList.remove('on');
@@ -2313,6 +2405,7 @@
   }
   function choose(road){
     if(!running) return;
+    if(training && active && road!==active && !junctionBusy) trainFlags.switched=true;
     if(!coached.road){ coached.road=true; coach('<b>Good.</b> Keep switching before a queue backs up.',2000); }
     // A green now has a life. Holding a street open indefinitely meant one
     // decision every five seconds played as well as one every second — the
@@ -2450,9 +2543,11 @@
         floodBonusDone=false; floodCleared=0; ferryRushDone=false; ferryRushCleared=0;
       }
     }
-    clock.textContent = endless
-      ? ('W'+(wave+1))
-      : (Math.floor(remain/60)+':'+String(Math.floor(remain%60)).padStart(2,'0'));
+    clock.textContent = training
+      ? '\u2014'
+      : endless
+        ? ('W'+(wave+1))
+        : (Math.floor(remain/60)+':'+String(Math.floor(remain%60)).padStart(2,'0'));
 
     // Sprint 5 weather escalates visibly and mechanically. Beach Road remains usable,
     // but every stage makes it more costly to ignore.
@@ -2689,6 +2784,7 @@
           statusEl.textContent='\uD83D\uDCA8 Arm tired \u2014 let it recover';
           if(navigator.vibrate) navigator.vibrate([6,40,6]);
         }
+        if(waving && training) trainFlags.waved=true;
         if(waving){
           waveUsed++;
           statusEl.textContent='\uD83D\uDC4B WAVING THROUGH \u2014 '+Cap(dirName[active]);
@@ -3009,8 +3105,9 @@
     // gridlock. The count has to stay over the line for JAM_HOLD seconds.
     if(waiting>peakQueued) peakQueued=waiting;
     if(waiting>JAM_LIMIT) jamT+=dt; else jamT=0;
-    if(jamT>=JAM_HOLD || meltdowns>=8){ end('gridlock'); return }
-    if(!endless && remain<=0){ end('time'); return }
+    if(training){ trainStep(dt); if(!running) return }
+    if((jamT>=JAM_HOLD || meltdowns>=8) && !training){ end('gridlock'); return }
+    if(!endless && !training && remain<=0){ end('time'); return }
     requestAnimationFrame(update);
   }
 
@@ -3038,7 +3135,7 @@
   // shift does not begin until go() — a 90-second timer that starts while the
   // player is still reading the board is 90 seconds of guessing.
   function start(){
-    shift=SHIFTS[shiftIx];
+    shift = training ? TRAIN_SHIFT : SHIFTS[shiftIx];
     SCH=rollSchedule();
     subEl.textContent='Vineyard Haven';
     shiftSubEl.textContent=shift.name;
@@ -3047,7 +3144,8 @@
     startedWith = score;
     crashWarned = endless || shiftIx>0;   // free pass on Morning Boat only
     scoreEl.textContent=Math.floor(score);
-    for(let i=0;i<START_TOTAL;i++) spawn(weightedRoad(shift.mix),false);
+    const deal = training ? 6 : START_TOTAL;
+    for(let i=0;i<deal;i++) spawn(weightedRoad(shift.mix),false);
     // spawnBase puts new arrivals at least 140 units back from the line, which
     // is right for traffic that drives in during play but leaves the opening
     // board looking empty. Pull the opening deal forward into a real queue.
@@ -3059,15 +3157,18 @@
       });
     }
     // Fill the queue pills so the opening board reads correctly while held.
-    if(readyShift) readyShift.textContent = endless ? 'ENDLESS' : shift.name;
+    if(readyShift) readyShift.textContent = training ? 'TRAINING' : (endless ? 'ENDLESS' : shift.name);
+    if(clockLabel) clockLabel.textContent = training ? 'Lesson' : (endless ? 'Wave' : 'Time');
+    if(training) clock.textContent='\u2014';
     const goalHost=document.getElementById('readyGoals');
     if(goalHost){
-      goalHost.classList.toggle('hide',endless);
+      goalHost.classList.toggle('hide', endless || training);
       if(!endless) goalHost.innerHTML='<div class="goalHead">Goals \u00b7 +'+GOAL_BONUS+' each</div>'+
         '<div class="goal" style="opacity:.62;margin-bottom:4px">\u2605\u2605\u2605 at '+ladderFor(shiftIx)[2].toLocaleString()+' points this shift</div>'+
         goalsFor(shiftIx).map(function(g){ return '<div class="goal">\u25CB '+g.text+'</div>' }).join('');
     }
-    if(readyRule) readyRule.textContent = endless
+    if(readyRule && training) readyRule.textContent = TRAIN_SHIFT.rule;
+    else if(readyRule) readyRule.textContent = endless
       ? 'No clock. Waves keep building until you drop it.'
       : (shift.rule||'Traffic is already queued.');
     // A briefing is right the first time and a wall the fortieth. Once a shift
@@ -3091,6 +3192,8 @@
     if(readyOverlay) readyOverlay.classList.add('hide');
     tip.classList.add('hide');
     appEl.classList.add('playing');
+    if(quitTrain) quitTrain.classList.toggle('hide', !training);
+    if(temperPlaque) temperPlaque.classList.toggle('hide', training);
     running=true; last=0; acc=0; startTime=performance.now();
     lifetimePlays++; try{localStorage.setItem(PLAY_KEY,String(lifetimePlays))}catch(e2){}
     if(lifetimePlays<=2) setTimeout(()=>coach('<b>Tap any road</b> to wave it through, then move on before it backs up.',2400),500);
@@ -3293,6 +3396,12 @@
     c.addEventListener('click',closeScores);
     c.addEventListener('touchend',closeScores,{passive:false});
   })();
+  const quitTrain=document.getElementById('quitTrain');
+  if(quitTrain){
+    const bail=function(e){ if(e){e.preventDefault();e.stopPropagation();} if(training) finishTraining(); };
+    quitTrain.addEventListener('click',bail);
+    quitTrain.addEventListener('touchend',bail,{passive:false});
+  }
   const shareBtn=document.getElementById('shareBtn');
   function copyResult(e){
     if(e){ e.preventDefault(); e.stopPropagation(); }
@@ -3361,6 +3470,7 @@
     // Still inside the same user gesture, so iOS will still unlock audio.
     try{ initAudio() }catch(e2){}
   }
+  const trainBtn=document.getElementById('trainBtn');
   const endlessBtn=document.getElementById('endlessBtn'), bestLine=document.getElementById('titleBest');
   function showBest(){
     // Shift best used to sit here; the TOP TEN board covers it properly now,
@@ -3401,12 +3511,24 @@
   // listened on the entire overlay for click/pointerup/touchend; on iPhone that
   // could route one tap through multiple event paths. A continuously transforming
   // pulse animation on the button made hit-testing less reliable as well.
-  function startCampaign(e){ if(e){e.preventDefault();e.stopPropagation();} endless=false; seedFn=null; if(shiftIx===0) carry=0; launch(); }
-  function startEndless(e){ if(e){e.preventDefault();e.stopPropagation();} endless=true; launch(); }
+  function startCampaign(e){ if(e){e.preventDefault();e.stopPropagation();} endless=false; training=false; seedFn=null; if(shiftIx===0) carry=0; launch(); }
+  function startTraining(e){
+    if(e){ e.preventDefault(); e.stopPropagation(); }
+    endless=false; training=true; carry=0;
+    tStep=0; tHold=0;
+    trainFlags.switched=trainFlags.waved=trainFlags.stopped=false;
+    for(const st of TRAIN) st._shown=false;
+    launch();
+  }
+  function startEndless(e){ if(e){e.preventDefault();e.stopPropagation();} endless=true; training=false; launch(); }
   startBtn.addEventListener('click',startCampaign);
   endlessBtn.addEventListener('click',startEndless);
   // touchend is retained explicitly for older iOS/WebView contexts where a click
   // may be delayed or suppressed. launch() is guarded, so duplicate delivery is safe.
+  if(trainBtn){
+    trainBtn.addEventListener('click',startTraining);
+    trainBtn.addEventListener('touchend',startTraining,{passive:false});
+  }
   startBtn.addEventListener('touchend',startCampaign,{passive:false});
   endlessBtn.addEventListener('touchend',startEndless,{passive:false});
   // Last resort: if neither click nor touchend is delivered to the button (an

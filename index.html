@@ -289,6 +289,14 @@
     text-transform:uppercase;opacity:.78;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #scoreList .dt{font-size:10.5px;opacity:.45;white-space:nowrap}
   #scoreEmpty{font-size:13px;opacity:.7;margin-bottom:18px}
+  #scoreTabs{display:flex;gap:6px;margin-bottom:12px}
+  .stab{min-width:0;width:auto;padding:7px 16px;font-size:11.5px;font-weight:800;
+    letter-spacing:1px;border-radius:999px;border:1px solid #ffffff30;
+    background:transparent;color:var(--cream);opacity:.65;box-shadow:none}
+  .stab.on{opacity:1;background:#e8c86a24;border-color:#e8c86a88;color:var(--gold)}
+  .stab:active{transform:none}
+  #scoreNote{font-size:11.5px;opacity:.6;margin:-8px 0 14px;max-width:320px}
+  #scoreNote.hide{display:none!important}
   #startOverlay{position:absolute;left:0;top:0;right:0;bottom:0;background:linear-gradient(#173541e8,#071218ee);z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
     /* Was a flat 30px pad with no scroll. On a short phone (or with iOS text
        inflation) the buttons fell below the fold of an overflow:hidden #app and
@@ -751,9 +759,14 @@
   </div>
   <div id="scoresOverlay" class="hide">
     <h1>TOP TEN</h1>
-    <div class="scoreSub">Best shifts on this device</div>
+    <div class="scoreSub" id="scoreSub">Best shifts, everywhere</div>
+    <div id="scoreTabs">
+      <button id="tabGlobal" class="stab on">GLOBAL</button>
+      <button id="tabLocal" class="stab">THIS DEVICE</button>
+    </div>
     <ol id="scoreList"></ol>
     <div id="scoreEmpty" class="hide">Nothing logged yet. Play a shift.</div>
+    <div id="scoreNote" class="hide"></div>
     <button id="scoresClose" class="ghost">CLOSE</button>
   </div>
   <div id="startOverlay">
@@ -793,7 +806,7 @@
   try{ const raw=localStorage.getItem(BEST_KEY); if(raw) best=Object.assign(best,JSON.parse(raw)) }catch(e){}
   function saveBest(){ try{ localStorage.setItem(BEST_KEY,JSON.stringify(best)) }catch(e){} }
 
-  const BUILD='s23 · 2026-08-15';
+  const BUILD='s24 · 2026-08-15';
   // Every roll in the game goes through rnd(). Left alone it is Math.random();
   // seeded, it makes a run reproducible — which is what lets everybody play the
   // same traffic on the same day and compare honestly.
@@ -820,6 +833,56 @@
   try{ const raw=localStorage.getItem(TOP_KEY); if(raw) topTen=JSON.parse(raw)||[] }catch(e){}
   if(!Array.isArray(topTen)) topTen=[];
   function saveTop(){ try{ localStorage.setItem(TOP_KEY,JSON.stringify(topTen)) }catch(e){} }
+
+  // ---- Global leaderboard (Supabase) ---------------------------------------
+  // The project URL and publishable key are meant to be public — they ship in
+  // every page load of every Supabase app. They authorize as "anon": row-level
+  // security on the scores table is what actually limits what that role can
+  // do (read everything, insert a row, never update or delete). See the SQL
+  // this was set up with for the exact policies.
+  //
+  // A determined person can still read this key straight out of the page and
+  // post a fake score — no client-side key can prevent that. RLS keeps them
+  // from doing anything worse, like overwriting or deleting real scores.
+  const SUPA_URL='https://xoouklzdvcqdvmvsxcuc.supabase.co';
+  const SUPA_KEY='sb_publishable_zs7LglX7kMTjVQ9_xP4kGA_aO1sAiyT';
+  const NAME_KEY='fiveCorners.player.v1';
+  function getPlayerName(){
+    try{ return localStorage.getItem(NAME_KEY) }catch(e){ return null }
+  }
+  function setPlayerName(n){ try{ localStorage.setItem(NAME_KEY,n) }catch(e){} }
+  function askPlayerName(){
+    // Three-letter arcade initials, in keeping with the game's own fiction —
+    // not a full profile. Asked once, reused after.
+    let n=null;
+    try{ n=window.prompt('Initials for the leaderboard (up to 3 letters):','') }catch(e){}
+    if(n==null) return null;
+    n=n.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,3);
+    if(!n) return null;
+    setPlayerName(n);
+    return n;
+  }
+  function postGlobalScore(value,shiftLabel,starsVal){
+    let name=getPlayerName();
+    if(!name){ name=askPlayerName(); if(!name) return; }
+    try{
+      fetch(SUPA_URL+'/rest/v1/scores',{
+        method:'POST',
+        headers:{ 'apikey':SUPA_KEY, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+        body:JSON.stringify({ name:name, score:Math.floor(value), shift:String(shiftLabel).slice(0,24), stars:starsVal|0 })
+      }).catch(function(){});   // best-effort; a dropped post should never block play
+    }catch(e){}
+  }
+  function fetchGlobalTop(cb){
+    let url=SUPA_URL+'/rest/v1/scores?select=name,score,shift,stars,created_at'+
+            '&order=score.desc,created_at.asc&limit='+TOP_N;
+    try{
+      fetch(url,{headers:{'apikey':SUPA_KEY,'Accept':'application/json'}})
+        .then(function(r){ if(!r.ok) throw new Error('bad status'); return r.json() })
+        .then(function(rows){ cb(rows,null) })
+        .catch(function(err){ cb(null,err) });
+    }catch(e){ cb(null,e) }
+  }
   // Lifetime service record. The returning player's reasons to open the game
   // were beat-the-top-ten and nothing else; a milestone track with one unticked
   // box always visible is retention that needs no server.
@@ -869,12 +932,14 @@
     try{ return new Date(ms).toLocaleDateString(undefined,{month:'short',day:'numeric'}) }
     catch(e){ return '' }
   }
-  function renderScores(freshIx){
+  // Both boards render through one function: same row shape whether the rows
+  // came from localStorage or from Supabase, just a different field mapping.
+  function renderRows(rows, freshIx){
     const list=document.getElementById('scoreList'), empty=document.getElementById('scoreEmpty');
     if(!list) return;
     list.innerHTML='';
-    if(empty) empty.classList.toggle('hide', topTen.length>0);
-    topTen.forEach(function(e,i){
+    if(empty) empty.classList.toggle('hide', rows.length>0);
+    rows.forEach(function(e,i){
       const li=document.createElement('li');
       if(i===freshIx) li.className='fresh';
       const stars=e.st?'\u2605'.repeat(e.st):'';
@@ -885,6 +950,46 @@
       list.appendChild(li);
     });
   }
+  function renderScores(freshIx){
+    renderRows(topTen.map(function(e){ return {s:e.s, n:e.n, st:e.st, d:e.d} }), freshIx);
+  }
+  function renderGlobal(){
+    const note=document.getElementById('scoreNote');
+    if(note) note.classList.add('hide');
+    const list=document.getElementById('scoreList');
+    if(list) list.innerHTML='<li class="loading">Loading\u2026</li>';
+    fetchGlobalTop(function(rows,err){
+      if(scoreTab!=='global') return;   // player already switched away
+      if(err || !rows){
+        if(note){ note.textContent='Couldn\u2019t reach the leaderboard \u2014 showing this device instead.'; note.classList.remove('hide') }
+        scoreTab='local'; updateTabs(); renderScores(-1);
+        return;
+      }
+      renderRows(rows.map(function(r){
+        return {s:r.score, n:(r.name||'')+' \u00b7 '+(r.shift||''), st:r.stars, d:Date.parse(r.created_at)||0};
+      }), -1);
+    });
+  }
+  let scoreTab='global';
+  function updateTabs(){
+    const tg=document.getElementById('tabGlobal'), tl=document.getElementById('tabLocal');
+    if(tg) tg.classList.toggle('on', scoreTab==='global');
+    if(tl) tl.classList.toggle('on', scoreTab==='local');
+    const sub=document.getElementById('scoreSub');
+    if(sub) sub.textContent = scoreTab==='global' ? 'Best shifts, everywhere' : 'Best shifts on this device';
+  }
+  function switchTab(tab){
+    scoreTab=tab; updateTabs();
+    const note=document.getElementById('scoreNote'); if(note) note.classList.add('hide');
+    if(tab==='local') renderScores(-1); else renderGlobal();
+  }
+  ['tabGlobal','tabLocal'].forEach(function(id){
+    const b=document.getElementById(id);
+    if(!b) return;
+    const go=function(e){ if(e){e.preventDefault();e.stopPropagation();} switchTab(id==='tabGlobal'?'global':'local'); };
+    b.addEventListener('click',go);
+    b.addEventListener('touchend',go,{passive:false});
+  });
   const NS='http://www.w3.org/2000/svg';
   const svg=document.getElementById('map');
   const roads=['N','W','E','SE','S'];
@@ -3426,7 +3531,9 @@
     if(!endless && outcome==='time'){ stats.shifts++; if(collisions===0) stats.clean++; }
     if(dayStarsOut>=0) stats.days++;
     saveStats(); renderRecord();
-    const rank=recordScore(final, endless?('Endless · wave '+(wave+1)):shift.name, stars);
+    const shiftLabel = endless?('Endless · wave '+(wave+1)):shift.name;
+    const rank=recordScore(final, shiftLabel, stars);
+    postGlobalScore(final, shiftLabel, stars);
     const bl=document.getElementById('bestLine');
     if(bl){
       bl.textContent=(final>oldBest?'NEW BEST · ':'BEST · ')+shiftBest.toLocaleString()+
@@ -3473,7 +3580,8 @@
   const scoresOverlay=document.getElementById('scoresOverlay');
   function openScores(e){
     if(e){ e.preventDefault(); e.stopPropagation(); }
-    renderScores(-1);
+    scoreTab='global'; updateTabs();
+    renderGlobal();
     if(scoresOverlay) scoresOverlay.classList.remove('hide');
   }
   function closeScores(e){

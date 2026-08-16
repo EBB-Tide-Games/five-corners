@@ -12,16 +12,16 @@
 <meta property="og:site_name" content="Five Corners" />
 <meta property="og:title" content="Five Corners — Vineyard Haven" />
 <meta property="og:description" content="You are the crossing guard at Five Corners. Keep the island moving before Vineyard tempers boil over. A one-thumb browser game." />
-<meta property="og:url" content="https://ebb-tide-games.github.io/five-corners/" />
-<meta property="og:image" content="https://ebb-tide-games.github.io/five-corners/og-image.png" />
+<meta property="og:url" content="https://fivecornersgames.github.io/five-corners/" />
+<meta property="og:image" content="https://fivecornersgames.github.io/five-corners/og-image.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta property="og:image:alt" content="An overhead view of the five-way intersection at Vineyard Haven, with traffic queued on every approach." />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Five Corners — Vineyard Haven" />
 <meta name="twitter:description" content="You are the crossing guard. Keep the island moving." />
-<meta name="twitter:image" content="https://ebb-tide-games.github.io/five-corners/og-image.png" />
-<link rel="apple-touch-icon" href="https://ebb-tide-games.github.io/five-corners/apple-touch-icon.png" />
+<meta name="twitter:image" content="https://fivecornersgames.github.io/five-corners/og-image.png" />
+<link rel="apple-touch-icon" href="https://fivecornersgames.github.io/five-corners/apple-touch-icon.png" />
 <!-- The apple-touch-icon covers iOS; Android wants a manifest for the same
      Add-to-Home-Screen treatment. Must live at the repo root beside this file. -->
 <link rel="manifest" href="manifest.webmanifest" />
@@ -806,7 +806,7 @@
   try{ const raw=localStorage.getItem(BEST_KEY); if(raw) best=Object.assign(best,JSON.parse(raw)) }catch(e){}
   function saveBest(){ try{ localStorage.setItem(BEST_KEY,JSON.stringify(best)) }catch(e){} }
 
-  const BUILD='s24 · 2026-08-15';
+  const BUILD='s25 · 2026-08-15';
   // Every roll in the game goes through rnd(). Left alone it is Math.random();
   // seeded, it makes a run reproducible — which is what lets everybody play the
   // same traffic on the same day and compare honestly.
@@ -3521,9 +3521,12 @@
       final.toLocaleString()+' points' +
       (!endless && dayTotal!==final ? ' \u00b7 day '+dayTotal.toLocaleString() : '') + '\n' +
       (dayStarsOut>=0
-        ? 'FULL DAY '+'\u2605'.repeat(dayStarsOut)+'\u2606'.repeat(MAX_STARS-dayStarsOut) : '');
-    // No link, at the developer's choice: the copy is the scoreline, not an advert.
-    lastResult = lastResult.replace(/\n+$/,'');
+        ? 'FULL DAY '+'\u2605'.repeat(dayStarsOut)+'\u2606'.repeat(MAX_STARS-dayStarsOut)+'\n' : '');
+    // Now that scores are on a shared board, a paste with no way back to the
+    // game recruits nobody onto it. Fixed link — the current tab's own URL can
+    // carry a stray ?v=cache-bust query string, which would look wrong pasted
+    // into a chat.
+    lastResult = (lastResult.replace(/\n+$/,'') + '\nhttps://fivecornersgames.github.io/five-corners/');
     // Lifetime tallies. Counted whatever the outcome — the record is about
     // volume of service, not only wins — except the clean-shift badge, which
     // has to be earned whole.

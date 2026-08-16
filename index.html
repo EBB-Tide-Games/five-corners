@@ -126,8 +126,18 @@
   /* FLOW is the number the game most wants you to care about and it had no
      permanent readout at all — it flashed for a second in a corner. */
   #flowBadge{font-family:Georgia,serif;font-weight:900;font-size:17px;line-height:1;
-    padding:2px 7px;border-radius:8px;white-space:nowrap;flex:0 0 auto;
-    transition:background .18s,color .18s,transform .12s,box-shadow .18s}
+    padding:2px 7px;border-radius:8px;white-space:nowrap;flex:0 0 auto;position:relative;
+    overflow:hidden;transition:background .18s,color .18s,transform .12s,box-shadow .18s}
+  #flowNum{position:relative;z-index:2}
+  /* The streak bleeds after 2.6 idle seconds and nothing said so — the
+     multiplier simply dropped. This is the window in which the player can still
+     save it, so it has to be visible. */
+  #flowDrain{position:absolute;left:0;top:0;bottom:0;width:0;z-index:1;
+    background:#ffffff3d;border-right:2px solid #ffffff8a;opacity:0;transition:opacity .15s}
+  #flowDrain.on{opacity:1}
+  #flowDrain.last{background:#ff756855;border-right-color:#ff7568;
+    animation:drainWarn .3s ease-in-out infinite alternate}
+  @keyframes drainWarn{to{background:#ff7568aa}}
   #flowBadge.m1{background:#ffffff14;color:#cbb98a;font-size:14px;padding:3px 6px}
   #flowBadge.m2{background:#e7a23b;color:#241f12}
   #flowBadge.m3{background:#e5762f;color:#fff}
@@ -354,7 +364,11 @@
   @media (prefers-reduced-motion:reduce){.glow.warn{animation:none;opacity:.22}}
   .car.boat rect.body{stroke:#5c3d00;stroke-width:2.5}
   .car.boat rect.win{fill:#7a5a1088}
-  .car .halo{fill:none;stroke:#ffd23f;stroke-width:3;opacity:.85;animation:halo 1s ease-in-out infinite}
+  /* Dashed, so the ring is still a distinct SHAPE for a player who cannot use
+     the yellow and has reduced motion switched on — previously the only
+     non-colour cue was the pulse, and we disable that for them. */
+  .car .halo{fill:none;stroke:#ffd23f;stroke-width:3;opacity:.9;stroke-dasharray:5 4;
+             animation:halo 1s ease-in-out infinite}
   @keyframes halo{50%{opacity:.25;stroke-width:5}}
   .car.missed .halo{stroke:#9a9a9a;animation:none;opacity:.5}
   .car.missed rect.body{fill:#8f8a7e;stroke:#4a4a4a}
@@ -362,6 +376,8 @@
   .car.near rect.body{stroke:#fff;stroke-width:3}
   .pop{font-size:26px;font-weight:900;text-anchor:middle;paint-order:stroke;stroke:#0b1a22;stroke-width:5;stroke-linejoin:round}
   .pop.good{fill:#8ff2a4}.pop.bad{fill:#ff8a7d}.pop.boat{fill:#ffd45e}
+  .popmult{font-size:16px;font-weight:900;text-anchor:middle;fill:#ffd45e;
+    paint-order:stroke;stroke:#0b1a22;stroke-width:4;stroke-linejoin:round}
   .ped{font-size:30px;text-anchor:middle;dominant-baseline:middle;pointer-events:auto;cursor:pointer;paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round}
   .ped.stepping{animation:pedStep .45s ease-in-out infinite alternate}
   @keyframes pedStep{to{transform:scale(1.22)}}
@@ -392,7 +408,7 @@
   .car.ambulance rect.body{fill:#f7f7f2;stroke:#d9544d;stroke-width:3}
   .car.ambulance rect.win{fill:#9bd8ed}
   .car.ambulance .ambMark{fill:#d9544d;font-size:15px;font-weight:900;text-anchor:middle;dominant-baseline:middle}
-  .car.ambulance .ambHalo{fill:none;stroke:#5db9ff;stroke-width:4;animation:ambFlash .45s infinite alternate}
+  .car.ambulance .ambHalo{fill:none;stroke:#5db9ff;stroke-width:4;stroke-dasharray:14 6;animation:ambFlash .45s infinite alternate}
   @keyframes ambFlash{to{stroke:#ff5a52;stroke-width:7}}
 
   #strikes{font-size:12px;letter-spacing:2px}
@@ -567,7 +583,7 @@
       <div class="temper">Score</div>
       <div class="scoreRow">
         <div class="score"><span id="score">0</span></div>
-        <div id="flowBadge" class="m1">&times;1</div>
+        <div id="flowBadge" class="m1"><span id="flowDrain"></span><span id="flowNum">&times;1</span></div>
         <div class="hudsub"><span id="strikes"></span> <span id="boatHud"></span></div>
       </div>
     </div>
@@ -734,7 +750,7 @@
   try{ const raw=localStorage.getItem(BEST_KEY); if(raw) best=Object.assign(best,JSON.parse(raw)) }catch(e){}
   function saveBest(){ try{ localStorage.setItem(BEST_KEY,JSON.stringify(best)) }catch(e){} }
 
-  const BUILD='s19c · 2026-08-15';
+  const BUILD='s20 · 2026-08-15';
   // Every roll in the game goes through rnd(). Left alone it is Math.random();
   // seeded, it makes a run reproducible — which is what lets everybody play the
   // same traffic on the same day and compare honestly.
@@ -876,15 +892,15 @@
   // has to do is three shifts.
   const SHIFTS=[
     {name:'MORNING BOAT', rate:[1.54,2.24,3.36], mix:{SE:34,W:30,S:16,N:12,E:8},  sail:68, peds:1.0,
-     force:'rush',      green:1.00, rule:'The boat is the whole shift. Ferry traffic runs heavy and the rush is guaranteed.'},
+     force:'rush',      green:1.00, hazards:1, rule:'The boat is the whole shift. Ferry traffic runs heavy and the rush is guaranteed.'},
     {name:'MIDDAY RUSH',  rate:[1.96,2.8,3.92], mix:{SE:28,W:26,S:18,N:18,E:10}, sail:66, peds:1.9,
-     force:'ambulance', green:1.00, rule:'The crosswalk never rests, and an ambulance is coming through.'},
+     force:'ambulance', green:1.00, hazards:2, rule:'The crosswalk never rests, and an ambulance is coming through.'},
     {name:'FIVE O\'CLOCK',rate:[2.38,3.22,4.34], mix:{SE:26,W:24,S:20,N:22,E:8},  sail:64, peds:1.4,
-     force:'flood',     green:0.72, rule:'Tired drivers, rising water. Your greens lapse faster \u2014 keep tapping.'},
+     force:'flood',     green:0.72, hazards:3, rule:'Tired drivers, rising water. Your greens lapse faster \u2014 keep tapping.'},
     // The finale. Nothing held back, and the boat leaves near the end, so the
     // rush IS the ending rather than something that happens along the way.
     {name:'LAST BOAT',   rate:[2.60,3.50,4.70], mix:{SE:30,W:26,S:16,N:20,E:8},  sail:80, peds:1.6,
-     force:'rush',      green:0.68,
+     force:'rush',      green:0.68, hazards:3,
      rule:'The last boat of the day. Nothing is held back, and she sails on the horn.'}
   ];
   let shiftIx=0, shift=SHIFTS[0];
@@ -926,28 +942,36 @@
     s.SAIL   = s.FERRY + jit(42,6);
     s.RAMP   = jit(18,4);
 
-    // All three tracks now run. Two-of-three kept shifts varied but it also
-    // meant the junction was rarely under pressure from more than one direction
-    // at a time, and a hazard the player can handle in isolation is a chore
-    // rather than a decision.
-    s.hasFlood = true;
-    s.hasAmb   = true;
-    s.hasRush  = true;
+    // HAZARD STAGING. Running all three tracks on every shift fixed one problem
+    // and created another: Morning Boat became a triage exercise before the
+    // player had learned to clear a queue. The day now escalates — one pressure
+    // source, then two, then three — and only the later shifts get the CRUNCH,
+    // where hazards are pulled deliberately toward the sailing instead of being
+    // spread away from it. Endless always runs everything.
+    const want = endless ? 3 : ((SHIFTS[shiftIx]||{}).hazards || 3);
+    const forced = (!endless && shift && shift.force) ? shift.force : null;
+    const pool = ['rush','ambulance','flood'].filter(function(h){ return h!==forced });
+    for(let i=pool.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); const t=pool[i]; pool[i]=pool[j]; pool[j]=t }
+    const picked = (forced?[forced]:[]).concat(pool).slice(0, Math.max(1,want));
+    s.hasFlood = picked.indexOf('flood')>=0;
+    s.hasAmb   = picked.indexOf('ambulance')>=0;
+    s.hasRush  = picked.indexOf('rush')>=0;
 
-    // CRUNCH. Hazards are pulled TOWARD the boat rather than spread away from
-    // it. The old scheduler contained a line that explicitly pushed the
-    // ambulance deadline clear of the sailing whenever the two rolled close
-    // together — it was engineering away the best moment in the game.
-    //
-    // Beach Road is already slowing as the ferry queue builds, and the
-    // ambulance deadline now lands inside the sailing window, so the player has
-    // to choose which one they are prepared to lose.
-    s.FLOOD = Math.max(10, s.FERRY - jit(7,3));
-    s.HIGH  = s.FERRY + jit(7,3);
-    s.DEEP  = Math.max(s.HIGH+6, s.SAIL - jit(9,4));
-    s.AMB   = Math.max(12, s.SAIL - AMBULANCE_LIMIT + jit(0,4));
-    // And a crossing lands in the same window, so the crosswalk is live too.
-    s.WALKER = s.SAIL - jit(9,4);
+    // Only stack them onto the sailing once the player has met them separately.
+    const crunch = endless || want>=3;
+
+    if(s.hasFlood){
+      s.FLOOD = crunch ? Math.max(10, s.FERRY - jit(7,3)) : jit(30,7);
+      s.HIGH  = crunch ? s.FERRY + jit(7,3)               : s.FLOOD + jit(17,4);
+      s.DEEP  = crunch ? Math.max(s.HIGH+6, s.SAIL - jit(9,4)) : s.HIGH + jit(22,5);
+    } else { s.FLOOD=s.HIGH=s.DEEP=9999 }
+
+    s.AMB = !s.hasAmb ? 9999
+          : crunch ? Math.max(12, s.SAIL - AMBULANCE_LIMIT + jit(0,4))
+                   : jit(46,10);
+
+    // A scheduled crossing inside the ferry window is part of the crunch too.
+    s.WALKER = crunch ? s.SAIL - jit(9,4) : 0;
     s.PEDMUL = s.hasRush ? 1.8 : 1.0;
     return s;
   }
@@ -1740,6 +1764,7 @@
   // to null now, so everything that touched them is guarded.
   const chipFlow=null;
   const flowBadge=document.getElementById('flowBadge');
+  const flowNum=document.getElementById('flowNum'), flowDrain=document.getElementById('flowDrain');
   const chipWeather=null, chipWeatherLabel=null, weatherBadge=null;
   const chipBoat=null, boatBadge=null;
   const chipPed=null, pedBadge=null;
@@ -1800,7 +1825,7 @@
     lastFlowMult=flowMult;
     // The old comboHud strip was replaced by the FLOW chip in the footer.
     if(flowBadge){
-      flowBadge.innerHTML='&times;'+flowMult;
+      if(flowNum) flowNum.innerHTML='&times;'+flowMult;
       flowBadge.className='m'+flowMult;
       if(flowMult>prevMult){
         flowBadge.classList.add('up');
@@ -1819,6 +1844,7 @@
     setFlow(0);
     if(had>1 && flowBadge){
       flowBadge.classList.add('broke');
+      if(flowDrain){ flowDrain.classList.remove('on','last'); flowDrain.style.width='0' }
       setTimeout(function(){ flowBadge.classList.remove('broke'); flowBadge.className='m'+flowMult },500);
       if(navigator.vibrate) navigator.vibrate(had>=3?[30,40,30]:[20]);
       if(had>=3) screech();
@@ -2124,9 +2150,25 @@
     t.appendChild(fo);
     setTimeout(function(){ if(t.parentNode) t.remove() },950);
   }
-  function pop(x,y,v,boat){
+  // showMult renders "110x3" above the total, so the multiplier teaches itself
+  // instead of being explained in a panel nobody opens mid-shift.
+  function pop(x,y,v,boat,showMult){
     const t=add('fx','text',{x:x,y:y,'class':'pop '+(v<0?'bad':(boat?'boat':'good'))});
     t.textContent=(v>0?'+':'')+Math.round(v);
+    if(showMult){
+      const m=add('fx','text',{x:x,y:y-19,'class':'popmult'});
+      m.textContent=showMult;
+      const ma=document.createElementNS(NS,'animateTransform');
+      ma.setAttribute('attributeName','transform'); ma.setAttribute('type','translate');
+      ma.setAttribute('from','0 0'); ma.setAttribute('to','0 -34');
+      ma.setAttribute('dur','0.9s'); ma.setAttribute('fill','freeze');
+      m.appendChild(ma);
+      const mf=document.createElementNS(NS,'animate');
+      mf.setAttribute('attributeName','opacity'); mf.setAttribute('from','.95'); mf.setAttribute('to','0');
+      mf.setAttribute('dur','0.9s'); mf.setAttribute('fill','freeze');
+      m.appendChild(mf);
+      setTimeout(function(){ if(m.parentNode) m.remove() },950);
+    }
     const an=document.createElementNS(NS,'animateTransform');
     an.setAttribute('attributeName','transform'); an.setAttribute('type','translate');
     an.setAttribute('from','0 0'); an.setAttribute('to','0 -34');
@@ -2581,7 +2623,7 @@
       pedNext-=dt;
       // Scheduled crossing inside the ferry crunch: the crosswalk is part of the
       // conflict, not a separate errand.
-      if(!walkerForced && SCH.WALKER && elapsed>=SCH.WALKER){ walkerForced=true; pedNext=0 }
+      if(!walkerForced && SCH.WALKER>0 && elapsed>=SCH.WALKER){ walkerForced=true; pedNext=0 }
       if(pedNext<=0){
         pedWaitingRoad=roads[Math.floor(rnd()*roads.length)]; pedWait=0; pedPenalty=false; if(!coached.ped){coached.ped=true;coach('<b>Pedestrian:</b> wave them across before they step out on their own.',2600);}
         const q=routes[pedWaitingRoad][Object.keys(routes[pedWaitingRoad])[0]];
@@ -2621,6 +2663,13 @@
     // FLOW decays if nothing clears. It sat at x4 for 65% of a shift, which
     // makes a multiplier a baseline rather than a reward. Now it has to be fed.
     sinceClear+=dt;
+    if(flowDrain){
+      const live = flow>0 && running;
+      const gone = Math.min(1, sinceClear/FLOW_IDLE);
+      flowDrain.classList.toggle('on', live && gone>0.04);
+      flowDrain.classList.toggle('last', live && gone>0.62);
+      flowDrain.style.width = live ? (gone*100).toFixed(0)+'%' : '0';
+    }
     if(flow>0 && sinceClear>FLOW_IDLE){ sinceClear=0; setFlow(Math.max(0,flow-FLOW_STEP)) }
 
     // Green light burns down; when it lapses the junction goes all-red.
@@ -2793,7 +2842,10 @@
           else breakFlow('AMBULANCE DELAYED');
         }
         if(car.wasWaved) base=Math.round(base*WAVE_BONUS);
-        if(base>0 && car.wait<=FLOW_WINDOW){ setFlow(flow+1); base=Math.round(base*flowMult); }
+        let multShown=null, preMult=base;
+        if(base>0 && car.wait<=FLOW_WINDOW){ setFlow(flow+1);
+          if(flowMult>1) multShown=Math.round(preMult)+'\u00d7'+flowMult;
+          base=Math.round(base*flowMult); }
         else if(base<=0 || car.wait>FLOW_WINDOW+10) breakFlow('SLOW FLOW');
         if(ferryTriggered && !ferryRushDone && elapsed<SCH.FERRY+FERRY_RUSH_SECS) ferryRushCleared++;
         if(floodStage>0 && car.road==='SE'){
@@ -2807,7 +2859,7 @@
         car.worth=worth;
         if(worth<0) sourCars++;
         score=Math.max(0, score+worth);
-        pop(car.x,car.y,worth,car.boat);
+        pop(car.x,car.y,worth,car.boat,multShown);
       }else place(car);
     }
     // Only cars actually inside the junction can collide, and only with cars

@@ -697,10 +697,11 @@
          Fail the ambulance and you lose the streak.</p>
       <div class="aboutRule"></div>
       <p><b>Stars rate the shift you just played</b>, not the day. Each shift has
-         its own ladder, and the harder shifts sit lower &mdash; Five O&rsquo;Clock
-         pays less for the same work, so it asks for less. Your score carries
-         from Morning Boat through to Five O&rsquo;Clock, and finishing all three
-         earns a rating for the whole day.</p>
+         its own ladder, and the harder shifts sit lower &mdash; they pay less for
+         the same work, so they ask for less. Points buy the first four stars.
+         <b>The fifth is a perfect shift:</b> the five-star score, finished, no
+         collisions, all three goals. Your score carries across the day, and
+         finishing every shift earns a rating for the whole day.</p>
       <p class="aboutSign">Three collisions, or a junction jammed solid, ends the shift.</p>
     </div>
     <button id="scoringClose" class="ghost">CLOSE</button>
@@ -792,7 +793,7 @@
   try{ const raw=localStorage.getItem(BEST_KEY); if(raw) best=Object.assign(best,JSON.parse(raw)) }catch(e){}
   function saveBest(){ try{ localStorage.setItem(BEST_KEY,JSON.stringify(best)) }catch(e){} }
 
-  const BUILD='s22a · 2026-08-15';
+  const BUILD='s23 · 2026-08-15';
   // Every roll in the game goes through rnd(). Left alone it is Math.random();
   // seeded, it makes a run reproducible — which is what lets everybody play the
   // same traffic on the same day and compare honestly.
@@ -1817,16 +1818,28 @@
   // most (light traffic, prompt clears, few meltdowns) and Five O'Clock the
   // least, so a single bar quietly demanded MORE skill on the harder shift.
   // Each shift now has its own ladder, and the harder ones sit lower.
+  // Recalibrated against human play. The old rungs came from bot medians
+  // measured before the goals (+1,200 available), the finish bonus and the
+  // visible flow drain existed; a real player five-starred them immediately.
+  // Raised ~55% across the board — and see starsFor: points alone no longer
+  // reach the top.
   const STAR_LADDERS={
-    0:[2200,4000,6200,9000,13000],   // MORNING BOAT
-    1:[2000,3600,5600,8200,12000],   // MIDDAY RUSH
-    2:[1800,3300,5200,7600,11000],   // FIVE O'CLOCK
-    3:[1700,3100,4900,7200,10500],   // LAST BOAT
-    endless:[3000,6000,10000,16000,24000]
+    0:[3400,6200,9600,14000,20000],   // MORNING BOAT
+    1:[3100,5600,8600,12600,18000],   // MIDDAY RUSH
+    2:[2800,5100,8000,11500,16500],   // FIVE O'CLOCK
+    3:[2600,4800,7500,10800,15500],   // LAST BOAT
+    endless:[4500,9000,15000,24000,36000]
   };
   const MAX_STARS=5;
   function ladderFor(ix){ return STAR_LADDERS[endless?'endless':ix] || STAR_LADDERS[0] }
-  function starsFor(v,ix){ return ladderFor(ix).filter(function(x){ return v>=x }).length }
+  // Points buy the first four stars. The fifth is a PERFECT SHIFT: the 5-star
+  // score AND finished AND no collisions AND all three goals. A pure points
+  // ceiling is always beatable by grinding the multiplier; perfection is not —
+  // it survives every future scoring rebalance without retuning.
+  function starsFor(v,ix,perfect){
+    const n=ladderFor(ix).filter(function(x){ return v>=x }).length;
+    return n>=MAX_STARS && !perfect ? MAX_STARS-1 : n;
+  }
   // Stars were pure score, so a run that gridlocked at 55 seconds could out-rank
   // a completed one. They now mean "how well did you work the shift" AND "did
   // you see it out" — a shift you did not finish is capped here regardless of
@@ -3303,7 +3316,10 @@
     // Stars rate THIS shift's work; the big number is the day so far.
     const dayTotal=Math.floor(score);
     const final=endless?dayTotal:Math.max(0,dayTotal-Math.floor(startedWith));
-    const earnedStars=starsFor(final,completedShift);
+    const perfect = endless
+      ? (wave+1)>=6                       // endless has no goals; wave 6 is its perfection
+      : (outcome==='time' && collisions===0 && goalsMet===3);
+    const earnedStars=starsFor(final,completedShift,perfect);
     const capped = !endless && outcome!=='time' && earnedStars>FAIL_STAR_CAP;
     const stars = capped ? FAIL_STAR_CAP : earnedStars;
     document.getElementById('finalScore').textContent=dayTotal.toLocaleString();
@@ -3340,7 +3356,16 @@
           ? 'Shift unfinished — '+'★'.repeat(FAIL_STAR_CAP)+' is the cap. You had earned '+earnedStars+'.'
           : 'See the shift out to earn more than '+'★'.repeat(FAIL_STAR_CAP)+'.';
       }
-      else if(stars<MAX_STARS){ const target=ladderFor(completedShift)[stars]; nextTarget.textContent=(target-final).toLocaleString()+' points to '+(stars+1)+'★'+(endless?'':' this shift'); }
+      else if(stars===MAX_STARS-1 && final>=ladderFor(completedShift)[MAX_STARS-1]){
+        nextTarget.textContent = endless
+          ? '5\u2605 needs wave 6'
+          : '5\u2605 needs a PERFECT SHIFT \u2014 finish, no collisions, all 3 goals';
+      }
+      else if(stars<MAX_STARS){
+        const target=ladderFor(completedShift)[stars];
+        nextTarget.textContent=(target-final).toLocaleString()+' points to '+(stars+1)+'\u2605'+
+          (stars===MAX_STARS-1 ? (endless?' + wave 6':' + a perfect shift') : (endless?'':' this shift'));
+      }
       else nextTarget.textContent='★'.repeat(MAX_STARS)+' MASTERED · chase a new best';
     }
     // Per-shift record, kept alongside the mode records above.
@@ -3359,26 +3384,40 @@
     // the whole social loop the game currently has.
     const outLabel = outcome==='time' ? 'SHIFT COMPLETE'
                    : outcome==='gridlock' ? 'GRIDLOCKED' : 'THREE STRIKES';
-    const statBits=['\uD83D\uDE97 '+moved+' moved'];
-    if(boatTotal>0) statBits.push('\u26F4\uFE0F '+boatMade+'/'+boatTotal);
-    statBits.push('\uD83D\uDD25 flow x'+Math.min(FLOW_MAX,1+Math.floor(maxFlow/FLOW_STEP)));
-    statBits.push('\uD83D\uDEA6 worst backup '+peakQueued);
+    // Wordle taught everyone to read a block of coloured squares in a group
+    // chat. Each row is one dimension of the run; counts small enough to show
+    // exactly are shown exactly (flow, goals, strikes), and only the ferry —
+    // which can be fifteen cars — is scaled onto a five-cell bar. Labels stay
+    // on every row because, unlike Wordle, nobody knows this grid yet.
+    const FIRE='\uD83D\uDD25', BOXW='\u2B1C', BOXB='\u2B1B', OK='\u2705',
+          YEL='\uD83D\uDFE8', GRN='\uD83D\uDFE9', BANG='\uD83D\uDCA5', WAVEMOJI='\uD83C\uDF0A';
+    const flowHit=Math.min(FLOW_MAX,1+Math.floor(maxFlow/FLOW_STEP));
+    const rows=[];
+    rows.push(FIRE.repeat(flowHit)+BOXW.repeat(FLOW_MAX-flowHit)+' flow \u00d7'+flowHit);
+    if(endless){
+      rows.push(WAVEMOJI.repeat(Math.min(wave+1,8))+' wave '+(wave+1));
+    }else{
+      rows.push(OK.repeat(goalsMet)+BOXW.repeat(3-goalsMet)+' goals '+goalsMet+'/3');
+      const shown=Math.min(3,collisions);
+      rows.push(BANG.repeat(shown)+GRN.repeat(3-shown)+
+                (collisions===0?' no collisions':' '+collisions+(collisions===1?' collision':' collisions')));
+    }
+    if(boatTotal>0){
+      const cells=5, madeCells=Math.max(boatMade>0?1:0, Math.round(boatMade/boatTotal*cells));
+      rows.push('\u26F4\uFE0F'+YEL.repeat(madeCells)+BOXB.repeat(cells-madeCells)+' boat '+boatMade+'/'+boatTotal);
+    }
     lastResult =
       'FIVE CORNERS \u2014 Vineyard Haven\n' +
-      (endless ? 'ENDLESS \u00b7 reached wave '+(wave+1)
+      (endless ? 'ENDLESS \u00b7 '+outLabel
                : shift.name+' \u00b7 '+outLabel) + '\n' +
       '\u2605'.repeat(stars)+'\u2606'.repeat(MAX_STARS-stars) +
-        (capped?' (capped \u2014 unfinished)':'') +
-        '   '+final.toLocaleString()+' points\n' +
-      statBits.join('  ') + '\n' +
-      (endless ? '' : '\uD83D\uDCA5 '+collisions+(collisions===1?' collision':' collisions')+
-                      '  \u00b7  goals '+goalsMet+'/3\n') +
-      (!endless && dayTotal!==final
-        ? 'Day total '+dayTotal.toLocaleString()+'\n' : '') +
+        (capped?' (capped \u2014 unfinished)':'') + '\n' +
+      rows.join('\n') + '\n' +
+      final.toLocaleString()+' points' +
+      (!endless && dayTotal!==final ? ' \u00b7 day '+dayTotal.toLocaleString() : '') + '\n' +
       (dayStarsOut>=0
         ? 'FULL DAY '+'\u2605'.repeat(dayStarsOut)+'\u2606'.repeat(MAX_STARS-dayStarsOut) : '');
-    // The link used to be appended here. Removed: the copy is the scoreline, not
-    // an advert, and anyone being sent it already has the game.
+    // No link, at the developer's choice: the copy is the scoreline, not an advert.
     lastResult = lastResult.replace(/\n+$/,'');
     // Lifetime tallies. Counted whatever the outcome — the record is about
     // volume of service, not only wins — except the clean-shift badge, which

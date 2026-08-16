@@ -230,6 +230,12 @@
   .readyNote b{color:#ffd077}
   .readyNote + .readyNote{margin-top:-3px}
   #readyHow.hide{display:none!important}
+  /* Distinct gold treatment: this is the reward for finishing Last Boat once,
+     not just another mode alongside Endless. */
+  #finaleBtn{background:linear-gradient(#f6b656,#e09a34);color:#13242b;
+    border:2px solid #ffd7a0;box-shadow:0 4px 0 #a86f1c,0 6px 14px #0007}
+  #finaleBtn:active{transform:translateY(3px);box-shadow:0 1px 0 #a86f1c,0 3px 8px #0007}
+  #finaleBtn.hide{display:none!important}
   #readyGoals{text-align:left;margin:2px 0 13px;padding:10px 12px;border-radius:11px;
     background:#ffffff0f;border:1px solid #ffffff1c}
   #readyGoals.hide{display:none!important}
@@ -323,7 +329,7 @@
         font-size:12px;opacity:.7;line-height:1.45}
   #startOverlay .logo{font-family:Georgia,serif;font-size:42px;font-weight:900;line-height:.98}
   #startOverlay .mv{letter-spacing:2px;opacity:.7;font-size:12px;margin:8px 0 26px}
-  .how{max-width:300px;line-height:1.45;font-size:15px;margin-bottom:24px}.how strong{color:#ffd077}
+  .how{max-width:320px;line-height:1.4;font-size:14.5px;margin-bottom:22px}.how strong{color:#ffd077}
   button.ghost{margin-top:10px;background:transparent;color:var(--cream);
                border:1px solid var(--plaque-br);box-shadow:none;font-size:15px}
   button.ghost:active{transform:translateY(1px);background:#ffffff12}
@@ -771,9 +777,10 @@
   </div>
   <div id="startOverlay">
     <div class="logo">FIVE<br>CORNERS</div><div class="mv">VINEYARD HAVEN, MASSACHUSETTS</div>
-    <div class="how"><strong>You are the crossing guard.</strong></div>
+    <div class="how"><strong>You’re the crossing guard at Martha’s Vineyard’s notorious Five Corners.</strong><br>Keep the island moving.</div>
     <button id="startBtn">PLAY SHIFT</button>
     <button id="endlessBtn" class="ghost">ENDLESS</button>
+    <button id="finaleBtn" class="hide">🎉 AUGUST SATURDAY</button>
     <button id="trainBtn" class="ghost">TRAINING SHIFT</button>
     <div id="titleLinks">
       <button class="tlink hide" id="trainLink">TRAINING</button>
@@ -806,7 +813,7 @@
   try{ const raw=localStorage.getItem(BEST_KEY); if(raw) best=Object.assign(best,JSON.parse(raw)) }catch(e){}
   function saveBest(){ try{ localStorage.setItem(BEST_KEY,JSON.stringify(best)) }catch(e){} }
 
-  const BUILD='s25 · 2026-08-15';
+  const BUILD='s26c · 2026-08-15';
   // Every roll in the game goes through rnd(). Left alone it is Math.random();
   // seeded, it makes a run reproducible — which is what lets everybody play the
   // same traffic on the same day and compare honestly.
@@ -887,7 +894,7 @@
   // were beat-the-top-ten and nothing else; a milestone track with one unticked
   // box always visible is retention that needs no server.
   const STATS_KEY='fiveCorners.stats.v1';
-  let stats={moved:0,boat:0,peds:0,clean:0,shifts:0,days:0};
+  let stats={moved:0,boat:0,peds:0,clean:0,shifts:0,days:0,lastBoatDone:false};
   try{ const raw=localStorage.getItem(STATS_KEY); if(raw) Object.assign(stats,JSON.parse(raw)||{}) }catch(e){}
   function saveStats(){ try{ localStorage.setItem(STATS_KEY,JSON.stringify(stats)) }catch(e){} }
   const MILESTONES={
@@ -1092,8 +1099,18 @@
     // rush IS the ending rather than something that happens along the way.
     {name:'LAST BOAT',   rate:[2.60,3.50,4.70], mix:{SE:30,W:26,S:16,N:20,E:8},  sail:80, peds:1.6,
      force:'rush',      green:0.68, hazards:3,
-     rule:'The last boat of the day. Nothing is held back, and she sails on the horn.'}
+     rule:'The last boat of the day. Nothing is held back, and she sails on the horn.'},
+    // The boss level. Unlocked by finishing Last Boat once — every hazard the
+    // game has, at once, plus a street fair that closes a road partway through.
+    // Not part of the four-shift day: it neither carries a score in nor pays a
+    // FULL DAY rating out. It exists to be the thing veteran players brag about.
+    {name:'AUGUST SATURDAY', rate:[2.95,4.00,5.30], mix:{SE:32,W:24,S:16,N:20,E:8}, sail:78, peds:1.9,
+     force:'flood',     green:0.60, hazards:3, closeRoad:true, isFinale:true,
+     rule:'\uD83C\uDF89 The hardest shift in the game. Every hazard at once, and a street fair closes a road partway through. Survive it.'}
   ];
+  // The normal campaign and its day rating only ever span the first four
+  // shifts. August Saturday sits outside that cycle deliberately.
+  const DAY_SHIFTS=4;
   let shiftIx=0, shift=SHIFTS[0];
   // Three goals a shift. Score alone is a weak thing to chase, and a goal is a
   // tutorial that does not feel like one: chasing "no collisions" teaches
@@ -1178,6 +1195,9 @@
     // A scheduled crossing inside the ferry window is part of the crunch too.
     s.WALKER = crunch ? s.SAIL - jit(9,4) : 0;
     s.PEDMUL = s.hasRush ? 1.8 : 1.0;
+    // The street fair. Campaign-only closure, distinct from Endless's per-wave
+    // version: fires once, partway through, on whichever shift asks for it.
+    s.CLOSE = (!endless && shift && shift.closeRoad) ? jit(30,6) : 9999;
     return s;
   }
   // Opposing lanes must never come closer than a car's width, whatever the
@@ -1933,6 +1953,7 @@
     1:[3100,5600,8600,12600,18000],   // MIDDAY RUSH
     2:[2800,5100,8000,11500,16500],   // FIVE O'CLOCK
     3:[2600,4800,7500,10800,15500],   // LAST BOAT
+    4:[1900,3600,5800,8600,12500],    // AUGUST SATURDAY — hardest shift, lowest bar
     endless:[4500,9000,15000,24000,36000]
   };
   const MAX_STARS=5;
@@ -1975,7 +1996,7 @@
   let flow=0,maxFlow=0,flowMult=1,lastFlowMult=1,intersectionWasBusy=false,clearSweeps=0;
   let ferryRushCleared=0,ferryRushDone=false,ferryWarnShown=-1,walkerForced=false,hornWarned=false;
   let ambulanceTriggered=false,ambulanceResolved=false,ambulanceCar=null,ambulanceDeadline=0;
-  let floodStage=0,floodCleared=0,floodBonusDone=false,lastFloodStage=0,rainAnnounced=false;
+  let floodStage=0,floodCleared=0,floodBonusDone=false,lastFloodStage=0,rainAnnounced=false,fairTriggered=false;
   const weatherHud=document.getElementById('weatherHud'), rainOverlay=document.getElementById('rainOverlay');
   // The four status chips were removed from the footer. Their handles resolve
   // to null now, so everything that touched them is guarded.
@@ -2783,6 +2804,17 @@
                       : (!sailed ? '\u26F4\uFE0F Sails in 0:'+String(Math.max(0,Math.ceil(SCH.SAIL-elapsed))).padStart(2,'0')
                                  : '\u26F4\uFE0F Boat away')));
 
+    // Street fair: one approach shuts for the rest of the shift. Whatever was
+    // already queued on it has to be cleared elsewhere or waited out — nothing
+    // new arrives there again.
+    if(!fairTriggered && elapsed>=SCH.CLOSE){
+      fairTriggered=true;
+      const open=roads.filter(function(r){ return r!==closedRoad });
+      closedRoad = open[Math.floor(rnd()*open.length)];
+      for(const r of roads) if(legFill[r]) legFill[r].classList.toggle('closed', r===closedRoad);
+      showEvent('\uD83C\uDF89 STREET FAIR \u2014 '+Cap(dirName[closedRoad]).toUpperCase()+' CLOSED',2200,true);
+      if(navigator.vibrate) navigator.vibrate([12,50,12]);
+    }
     // Sprint 4 priority event: one ambulance demands a fast, deliberate clear path.
     if(!ambulanceTriggered && elapsed>=SCH.AMB){ siren(); guardReact('alert',700);
       ambulanceTriggered=true; ambulanceDeadline=elapsed+AMBULANCE_LIMIT;
@@ -3304,7 +3336,7 @@
     acc=0; jamT=0; peakQueued=0; greenT=0; sinceClear=0; burstT=9; lastTap=0; pressRoad=null; waving=false; waveUsed=0;
     waveLeft=ARM_MAX; winded=false;
     if(waveEl) waveEl.classList.remove('on','spent'); wave=0; waveT=0; newRecord=false; sailed=false; blockedT=0; wreckCars=[]; pedT=0; pedNext=6; pedRoad=null; pedWaitingRoad=null; pedWait=0; pedPenalty=false; pedBase=null; pedPerp=null; pedHits=0; pedCrossed=0; pedPoints=0; happyPeds=0; boatTotal=0; boatMade=0; boatMissed=0; strikes=0; nearMisses=0; ferryTriggered=false; last=0;
-    crashed=false; crashPair=null; spawnAcc=0; walkerForced=false;
+    crashed=false; crashPair=null; spawnAcc=0; walkerForced=false; fairTriggered=false;
     closedRoad=null; appEl.classList.remove('night');
     for(const r of roads) if(legFill[r]) legFill[r].classList.remove('closed'); document.getElementById('fx').innerHTML=''; setFlow(0); maxFlow=0; lastFlowMult=1; intersectionWasBusy=false; clearSweeps=0; collisions=0; ferryRushCleared=0; ferryRushDone=false; ferryWarnShown=-1; hornWarned=false; ambulanceTriggered=false; ambulanceResolved=false; ambulanceCar=null; ambulanceDeadline=0; floodStage=0; floodCleared=0; floodBonusDone=false; lastFloodStage=0; rainAnnounced=false; eventBanner.classList.remove('show','danger'); if(momentEl) momentEl.classList.remove('show','danger','teach'); if(flowCall) flowCall.classList.remove('show'); if(sweepNote) sweepNote.classList.remove('show'); if(readyOverlay) readyOverlay.classList.add('hide'); if(coachEl) coachEl.classList.remove('show');
     for(const r of roads) if(gateEl[r]) gateEl[r].style.opacity=0;
@@ -3396,11 +3428,12 @@
     const completedShift=shiftIx;
     let carryNext=false;
     const titles={time:'SHIFT COMPLETE',gridlock:'FIVE CORNERS GRIDLOCKED',crash:'THREE STRIKES'};
-    document.getElementById('endTitle').textContent=titles[outcome]||'SHIFT OVER';
+    document.getElementById('endTitle').textContent =
+      (completedShift===DAY_SHIFTS && outcome==='time') ? 'SURVIVED AUGUST SATURDAY' : (titles[outcome]||'SHIFT OVER');
     if(outcome==='time'){
       score+=500;
-      if(shiftIx<SHIFTS.length-1){ shiftIx++; againBtn.textContent='NEXT: '+SHIFTS[shiftIx].name; carryNext=true }
-      else { shiftIx=0; carryNext=false; carry=0; againBtn.textContent='NEW DAY · '+SHIFTS[0].name }
+      if(shiftIx<DAY_SHIFTS-1){ shiftIx++; againBtn.textContent='NEXT: '+SHIFTS[shiftIx].name; carryNext=true }
+      else { const wasFinale=completedShift===DAY_SHIFTS; shiftIx=0; carryNext=false; carry=0; againBtn.textContent = wasFinale ? 'PLAY AGAIN' : 'NEW DAY · '+SHIFTS[0].name; }
     }else againBtn.textContent='TRY AGAIN · '+shift.name;
 
     // Goals are settled BEFORE anything is totalled, so the bonus reaches the
@@ -3436,7 +3469,7 @@
     document.getElementById('starsLine').textContent='★'.repeat(stars)+'☆'.repeat(MAX_STARS-stars);
     if(carryNext) carry=dayTotal;      // banked after goals, not before
     // Completing the third shift closes the day; rate the whole thing.
-    const dayDone = !endless && outcome==='time' && !carryNext;
+    const dayDone = !endless && outcome==='time' && !carryNext && completedShift!==DAY_SHIFTS;
     if(dayDone){
       dayStarsOut=DAY_LADDER.filter(function(x){ return dayTotal>=x }).length;
       const dayStars=dayStarsOut;
@@ -3481,7 +3514,7 @@
     // Progression still needs a completed clock, but a bad run should not trap
     // the player on one shift — they can move on if they would rather.
     if(skipBtn){
-      const canSkip = !endless && outcome!=='time' && shiftIx<SHIFTS.length-1;
+      const canSkip = !endless && outcome!=='time' && shiftIx<DAY_SHIFTS-1;
       skipBtn.classList.toggle('hide',!canSkip);
       if(canSkip) skipBtn.textContent='SKIP TO: '+SHIFTS[shiftIx+1].name;
     }
@@ -3533,7 +3566,8 @@
     stats.moved+=moved; stats.boat+=boatMade; stats.peds+=pedCrossed;
     if(!endless && outcome==='time'){ stats.shifts++; if(collisions===0) stats.clean++; }
     if(dayStarsOut>=0) stats.days++;
-    saveStats(); renderRecord();
+    if(!endless && outcome==='time' && completedShift===DAY_SHIFTS-1) stats.lastBoatDone=true;
+    saveStats(); renderRecord(); placeFinale();
     const shiftLabel = endless?('Endless · wave '+(wave+1)):shift.name;
     const rank=recordScore(final, shiftLabel, stars);
     postGlobalScore(final, shiftLabel, stars);
@@ -3728,7 +3762,18 @@
   // listened on the entire overlay for click/pointerup/touchend; on iPhone that
   // could route one tap through multiple event paths. A continuously transforming
   // pulse animation on the button made hit-testing less reliable as well.
-  function startCampaign(e){ if(e){e.preventDefault();e.stopPropagation();} endless=false; training=false; seedFn=null; if(shiftIx===0) carry=0; launch(); }
+  function startCampaign(e){ if(e){e.preventDefault();e.stopPropagation();} endless=false; training=false; seedFn=null; shiftIx=0; carry=0; launch(); }
+  function startFinale(e){
+    if(e){ e.preventDefault(); e.stopPropagation(); }
+    endless=false; training=false; seedFn=null; shiftIx=DAY_SHIFTS; carry=0; launch();
+  }
+  const finaleBtn=document.getElementById('finaleBtn');
+  function placeFinale(){ if(finaleBtn) finaleBtn.classList.toggle('hide', !stats.lastBoatDone) }
+  placeFinale();
+  if(finaleBtn){
+    finaleBtn.addEventListener('click',startFinale);
+    finaleBtn.addEventListener('touchend',startFinale,{passive:false});
+  }
   function startTraining(e){
     if(e){ e.preventDefault(); e.stopPropagation(); }
     endless=false; training=true; carry=0;
@@ -3790,7 +3835,7 @@
   // Build stamp lives in the diagnostics panel only (tap the title plaque).
   againBtn.onclick=function(){launched=false;showBest();placeTraining();launch()};
   if(skipBtn) skipBtn.onclick=function(){
-    if(shiftIx<SHIFTS.length-1) shiftIx++;
+    if(shiftIx<DAY_SHIFTS-1) shiftIx++;
     launched=false; showBest(); launch();
   };
   window.__fcReady=true;

@@ -232,10 +232,20 @@
   #readyHow.hide{display:none!important}
   /* Distinct gold treatment: this is the reward for finishing Last Boat once,
      not just another mode alongside Endless. */
-  #finaleBtn{background:linear-gradient(#f6b656,#e09a34);color:#13242b;
+  #finaleBtn,#finaleBtn2{background:linear-gradient(#f6b656,#e09a34);color:#13242b;
     border:2px solid #ffd7a0;box-shadow:0 4px 0 #a86f1c,0 6px 14px #0007}
-  #finaleBtn:active{transform:translateY(3px);box-shadow:0 1px 0 #a86f1c,0 3px 8px #0007}
-  #finaleBtn.hide{display:none!important}
+  /* Locked to the same footprint as the button above it (PLAY AGAIN / NEW DAY),
+     so the two are always the same size regardless of label length — text
+     that doesn't fit wraps inside this width rather than growing the button. */
+  #again,#finaleBtn2{width:min(78vw,300px);min-width:0}
+  #finaleBtn:active,#finaleBtn2:active{transform:translateY(3px);box-shadow:0 1px 0 #a86f1c,0 3px 8px #0007}
+  #finaleBtn.hide,#finaleBtn2.hide{display:none!important}
+  /* Glow only — no transform:scale. Scaling doesn't reserve extra layout
+     space, so a scaled-up button visually bleeds into whatever sits next to
+     it, which is exactly what made this overlap PLAY AGAIN and swallow taps
+     meant for the button beneath the glow. */
+  #finaleBtn2.newUnlock{animation:finaleGlow .7s ease-in-out 3}
+  @keyframes finaleGlow{50%{box-shadow:0 4px 0 #a86f1c,0 0 22px 4px #ffd07799}}
   #readyGoals{text-align:left;margin:2px 0 13px;padding:10px 12px;border-radius:11px;
     background:#ffffff0f;border:1px solid #ffffff1c}
   #readyGoals.hide{display:none!important}
@@ -654,7 +664,7 @@
   </footer>
   <div id="diag" class="hide"></div>
   <div id="errbar" class="hide"></div>
-  <div id="overlay" class="hide"><h1>FIVE CORNERS</h1><h2 id="endTitle">SHIFT COMPLETE</h2><div id="finalScore">0</div><div id="totalLabel">DAY TOTAL</div><div id="starsLine">☆☆☆☆☆</div><div id="shiftLine"></div><div id="dayLine" class="hide"></div><div id="bestLine"></div><div id="nextTarget"></div><div class="results" id="results"></div><button id="again">PLAY AGAIN</button><button id="skip" class="ghost hide">NEXT SHIFT</button><button id="shareBtn" class="ghost">COPY RESULT</button><button id="scoresBtn2" class="ghost">TOP TEN</button></div>
+  <div id="overlay" class="hide"><h1>FIVE CORNERS</h1><h2 id="endTitle">SHIFT COMPLETE</h2><div id="finalScore">0</div><div id="totalLabel">DAY TOTAL</div><div id="starsLine">☆☆☆☆☆</div><div id="shiftLine"></div><div id="dayLine" class="hide"></div><div id="bestLine"></div><div id="nextTarget"></div><div class="results" id="results"></div><button id="again">PLAY AGAIN</button><button id="finaleBtn2" class="hide">🎉 AUGUST SATURDAY</button><button id="skip" class="ghost hide">NEXT SHIFT</button><button id="shareBtn" class="ghost">COPY RESULT</button><button id="scoresBtn2" class="ghost">TOP TEN</button></div>
   <div id="readyOverlay" class="hide">
     <div class="readyCard">
       <div class="readyShift" id="readyShift">MORNING BOAT</div>
@@ -813,7 +823,7 @@
   try{ const raw=localStorage.getItem(BEST_KEY); if(raw) best=Object.assign(best,JSON.parse(raw)) }catch(e){}
   function saveBest(){ try{ localStorage.setItem(BEST_KEY,JSON.stringify(best)) }catch(e){} }
 
-  const BUILD='s26c · 2026-08-15';
+  const BUILD='s28b · 2026-08-15';
   // Every roll in the game goes through rnd(). Left alone it is Math.random();
   // seeded, it makes a run reproducible — which is what lets everybody play the
   // same traffic on the same day and compare honestly.
@@ -3566,8 +3576,9 @@
     stats.moved+=moved; stats.boat+=boatMade; stats.peds+=pedCrossed;
     if(!endless && outcome==='time'){ stats.shifts++; if(collisions===0) stats.clean++; }
     if(dayStarsOut>=0) stats.days++;
-    if(!endless && outcome==='time' && completedShift===DAY_SHIFTS-1) stats.lastBoatDone=true;
-    saveStats(); renderRecord(); placeFinale();
+    const justUnlocked = !endless && outcome==='time' && completedShift===DAY_SHIFTS-1 && !stats.lastBoatDone;
+    if(justUnlocked) stats.lastBoatDone=true;
+    saveStats(); renderRecord(); placeFinale(true, completedShift===DAY_SHIFTS, justUnlocked);
     const shiftLabel = endless?('Endless · wave '+(wave+1)):shift.name;
     const rank=recordScore(final, shiftLabel, stars);
     postGlobalScore(final, shiftLabel, stars);
@@ -3762,27 +3773,38 @@
   // listened on the entire overlay for click/pointerup/touchend; on iPhone that
   // could route one tap through multiple event paths. A continuously transforming
   // pulse animation on the button made hit-testing less reliable as well.
-  function startCampaign(e){ if(e){e.preventDefault();e.stopPropagation();} endless=false; training=false; seedFn=null; shiftIx=0; carry=0; launch(); }
+  function startCampaign(e){ if(e){e.preventDefault();e.stopPropagation();} endless=false; training=false; seedFn=null; shiftIx=0; carry=0; launched=false; launch(); }
   function startFinale(e){
     if(e){ e.preventDefault(); e.stopPropagation(); }
-    endless=false; training=false; seedFn=null; shiftIx=DAY_SHIFTS; carry=0; launch();
+    endless=false; training=false; seedFn=null; shiftIx=DAY_SHIFTS; carry=0; launched=false; launch();
   }
-  const finaleBtn=document.getElementById('finaleBtn');
-  function placeFinale(){ if(finaleBtn) finaleBtn.classList.toggle('hide', !stats.lastBoatDone) }
+  const finaleBtn=document.getElementById('finaleBtn'), finaleBtn2=document.getElementById('finaleBtn2');
+  // Shown on the title screen once unlocked, AND on every end screen after
+  // that — not just the one where it was earned. Hidden on the finale's own
+  // end screen, where offering to play it again is redundant with PLAY AGAIN.
+  function placeFinale(onEndScreen,justPlayedFinale,justUnlocked){
+    if(finaleBtn) finaleBtn.classList.toggle('hide', !stats.lastBoatDone);
+    if(finaleBtn2){
+      finaleBtn2.classList.toggle('hide', !stats.lastBoatDone || !!onEndScreen && !!justPlayedFinale);
+      finaleBtn2.textContent = justUnlocked ? '\uD83C\uDF89 NEW: AUGUST SATURDAY' : '\uD83C\uDF89 AUGUST SATURDAY';
+      finaleBtn2.classList.toggle('newUnlock', !!justUnlocked);
+    }
+  }
   placeFinale();
-  if(finaleBtn){
-    finaleBtn.addEventListener('click',startFinale);
-    finaleBtn.addEventListener('touchend',startFinale,{passive:false});
-  }
+  [finaleBtn,finaleBtn2].forEach(function(b){
+    if(!b) return;
+    b.addEventListener('click',startFinale);
+    b.addEventListener('touchend',startFinale,{passive:false});
+  });
   function startTraining(e){
     if(e){ e.preventDefault(); e.stopPropagation(); }
     endless=false; training=true; carry=0;
     tStep=0; tHold=0;
     trainFlags.switched=trainFlags.waved=trainFlags.stopped=false;
     for(const st of TRAIN) st._shown=false;
-    launch();
+    launched=false; launch();
   }
-  function startEndless(e){ if(e){e.preventDefault();e.stopPropagation();} endless=true; training=false; launch(); }
+  function startEndless(e){ if(e){e.preventDefault();e.stopPropagation();} endless=true; training=false; launched=false; launch(); }
   startBtn.addEventListener('click',startCampaign);
   endlessBtn.addEventListener('click',startEndless);
   // touchend is retained explicitly for older iOS/WebView contexts where a click

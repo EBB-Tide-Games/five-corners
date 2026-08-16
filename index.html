@@ -22,6 +22,9 @@
 <meta name="twitter:description" content="You are the crossing guard. Keep the island moving." />
 <meta name="twitter:image" content="https://ebb-tide-games.github.io/five-corners/og-image.png" />
 <link rel="apple-touch-icon" href="https://ebb-tide-games.github.io/five-corners/apple-touch-icon.png" />
+<!-- The apple-touch-icon covers iOS; Android wants a manifest for the same
+     Add-to-Home-Screen treatment. Must live at the repo root beside this file. -->
+<link rel="manifest" href="manifest.webmanifest" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230c1820'/%3E%3Cg stroke='%23767b7e' stroke-width='7' stroke-linecap='round'%3E%3Cpath d='M32 32 L32 4'/%3E%3Cpath d='M32 32 L4 28'/%3E%3Cpath d='M32 32 L60 30'/%3E%3Cpath d='M32 32 L56 58'/%3E%3Cpath d='M32 32 L26 60'/%3E%3C/g%3E%3Ccircle cx='32' cy='32' r='6' fill='%23e8c86a'/%3E%3C/svg%3E" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <title>Five Corners — Vineyard Haven</title>
@@ -227,8 +230,6 @@
   .readyNote b{color:#ffd077}
   .readyNote + .readyNote{margin-top:-3px}
   #readyHow.hide{display:none!important}
-  #howToggle{width:auto;min-width:0;padding:7px 14px;font-size:12px;margin:0 0 12px;opacity:.75}
-  #howToggle.hide{display:none!important}
   #readyGoals{text-align:left;margin:2px 0 13px;padding:10px 12px;border-radius:11px;
     background:#ffffff0f;border:1px solid #ffffff1c}
   #readyGoals.hide{display:none!important}
@@ -318,6 +319,28 @@
   button.ghost{margin-top:10px;background:transparent;color:var(--cream);
                border:1px solid var(--plaque-br);box-shadow:none;font-size:15px}
   button.ghost:active{transform:translateY(1px);background:#ffffff12}
+  /* Six full buttons had accumulated on the title screen — each earned its
+     place alone, together they crowded the front door. Two buttons remain;
+     the reference panels become a row of small links, and TRAINING is a full
+     button only until the first shift has been completed. */
+  #titleLinks{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+  .tlink{background:none;border:none;box-shadow:none;min-width:0;padding:7px 10px;
+    color:var(--gold);font-size:11.5px;font-weight:800;letter-spacing:1.4px;
+    text-transform:uppercase;opacity:.8;border-radius:8px}
+  .tlink:active{transform:none;background:#ffffff14;opacity:1}
+  .tlink.hide{display:none!important}
+  #recordBox{margin-top:14px;width:min(320px,84vw);text-align:left;
+    background:#ffffff0c;border:1px solid #ffffff1a;border-radius:12px;padding:9px 12px}
+  #recordBox.hide{display:none!important}
+  .recHead{font-size:9.5px;font-weight:900;letter-spacing:1.8px;color:var(--gold);
+    opacity:.8;margin-bottom:6px;text-align:center}
+  .recRow{display:flex;align-items:center;gap:6px;margin:4px 0;font-size:11.5px}
+  .recIcon{flex:0 0 auto}
+  .recVal{font-weight:900;color:var(--cream);font-variant-numeric:tabular-nums}
+  .recLbl{opacity:.65;flex:0 0 auto}
+  .recBar{flex:1 1 auto;height:5px;border-radius:3px;background:#00000066;overflow:hidden;min-width:34px}
+  .recFill{display:block;height:100%;background:var(--gold)}
+  .recNext{opacity:.55;font-size:10px;white-space:nowrap}
   #titleBest{margin-top:14px;font-size:12px;color:var(--gold);letter-spacing:.6px;min-height:16px}
   #bestLine{margin-top:14px;font-size:12px;color:var(--gold);letter-spacing:.6px;min-height:16px}
   .pulse{animation:pulse 1.2s infinite}@keyframes pulse{50%{transform:scale(1.035)}}
@@ -629,7 +652,6 @@
       <div class="readyNote"><span class="boatChip"></span><b>Yellow cars</b> have a boat to catch.</div>
       <div class="readyNote"><span class="pedChip">🚶</span><b>Wave pedestrians over</b> — they step out on their own if you don't.</div>
       </div>
-      <button id="howToggle" class="ghost hide">HOW TO PLAY</button>
       <div id="readyGoals"></div>
       <button id="goBtn">START CLOCK</button>
     </div>
@@ -739,9 +761,13 @@
     <button id="startBtn">PLAY SHIFT</button>
     <button id="endlessBtn" class="ghost">ENDLESS</button>
     <button id="trainBtn" class="ghost">TRAINING SHIFT</button>
-    <button id="scoresBtn" class="ghost">TOP TEN</button>
-    <button id="scoringBtn" class="ghost">SCORING</button>
-    <button id="aboutBtn" class="ghost">ABOUT</button>
+    <div id="titleLinks">
+      <button class="tlink hide" id="trainLink">TRAINING</button>
+      <button class="tlink" id="scoresBtn">TOP TEN</button>
+      <button class="tlink" id="scoringBtn">SCORING</button>
+      <button class="tlink" id="aboutBtn">ABOUT</button>
+    </div>
+    <div id="recordBox" class="hide"></div>
     <div id="titleBest"></div>
   </div>
 </div>
@@ -766,7 +792,7 @@
   try{ const raw=localStorage.getItem(BEST_KEY); if(raw) best=Object.assign(best,JSON.parse(raw)) }catch(e){}
   function saveBest(){ try{ localStorage.setItem(BEST_KEY,JSON.stringify(best)) }catch(e){} }
 
-  const BUILD='s21f · 2026-08-15';
+  const BUILD='s22a · 2026-08-15';
   // Every roll in the game goes through rnd(). Left alone it is Math.random();
   // seeded, it makes a run reproducible — which is what lets everybody play the
   // same traffic on the same day and compare honestly.
@@ -793,6 +819,41 @@
   try{ const raw=localStorage.getItem(TOP_KEY); if(raw) topTen=JSON.parse(raw)||[] }catch(e){}
   if(!Array.isArray(topTen)) topTen=[];
   function saveTop(){ try{ localStorage.setItem(TOP_KEY,JSON.stringify(topTen)) }catch(e){} }
+  // Lifetime service record. The returning player's reasons to open the game
+  // were beat-the-top-ten and nothing else; a milestone track with one unticked
+  // box always visible is retention that needs no server.
+  const STATS_KEY='fiveCorners.stats.v1';
+  let stats={moved:0,boat:0,peds:0,clean:0,shifts:0,days:0};
+  try{ const raw=localStorage.getItem(STATS_KEY); if(raw) Object.assign(stats,JSON.parse(raw)||{}) }catch(e){}
+  function saveStats(){ try{ localStorage.setItem(STATS_KEY,JSON.stringify(stats)) }catch(e){} }
+  const MILESTONES={
+    moved:[100,500,1000,2500,5000,10000],
+    boat:[10,50,150,400,1000],
+    clean:[1,5,15,40,100]
+  };
+  function renderRecord(){
+    const host=document.getElementById('recordBox');
+    if(!host) return;
+    if(!(stats.moved>0)){ host.classList.add('hide'); return }
+    host.classList.remove('hide');
+    const rows=[
+      {icon:'\uD83D\uDE97', label:'moved',         v:stats.moved, ms:MILESTONES.moved},
+      {icon:'\u26F4\uFE0F', label:'made the boat', v:stats.boat,  ms:MILESTONES.boat},
+      {icon:'\uD83D\uDCAF', label:'clean shifts',  v:stats.clean, ms:MILESTONES.clean}
+    ];
+    host.innerHTML='<div class="recHead">SERVICE RECORD</div>'+rows.map(function(r){
+      const next=r.ms.filter(function(x){ return r.v<x })[0];
+      const prev=r.ms.filter(function(x){ return r.v>=x }).slice(-1)[0]||0;
+      const pct = next ? Math.min(100,Math.round((r.v-prev)/(next-prev)*100)) : 100;
+      return '<div class="recRow">'+
+        '<span class="recIcon">'+r.icon+'</span>'+
+        '<span class="recVal">'+r.v.toLocaleString()+'</span>'+
+        '<span class="recLbl">'+r.label+'</span>'+
+        '<span class="recBar"><span class="recFill" style="width:'+pct+'%"></span></span>'+
+        '<span class="recNext">'+(next?('next '+next.toLocaleString()):'\u2605 maxed')+'</span>'+
+      '</div>';
+    }).join('');
+  }
   function recordScore(value,label,stars){
     value=Math.floor(value);
     if(!(value>0)) return -1;
@@ -978,14 +1039,22 @@
       s.FERRY=9999; s.SAIL=9999; s.WALKER=0; s.PEDMUL=1;
       return s;
     }
-    const want = endless ? 3 : ((SHIFTS[shiftIx]||{}).hazards || 3);
-    const forced = (!endless && shift && shift.force) ? shift.force : null;
-    const pool = ['rush','ambulance','flood'].filter(function(h){ return h!==forced });
+    // The ferry rush fires on every shift regardless — the boat always sails —
+    // so 'rush' in the draw pool was a blank: drawing it added nothing, which
+    // made "two-hazard" Midday sometimes a one-hazard run wearing the label. In
+    // a game whose scores get compared, difficulty should vary by play, not by
+    // lottery. The rush is now the permanent fact of life it already was, and
+    // `hazards` counts it: a shift's extras beyond the ferry are hazards-1,
+    // drawn only from the ambulance and the flood.
+    s.hasRush = true;
+    const want   = endless ? 3 : ((SHIFTS[shiftIx]||{}).hazards || 3);
+    const extras = Math.max(0, want-1);
+    const forcedExtra = (!endless && shift && shift.force && shift.force!=='rush') ? shift.force : null;
+    const pool = ['ambulance','flood'].filter(function(h){ return h!==forcedExtra });
     for(let i=pool.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); const t=pool[i]; pool[i]=pool[j]; pool[j]=t }
-    const picked = (forced?[forced]:[]).concat(pool).slice(0, Math.max(1,want));
+    const picked = (forcedExtra?[forcedExtra]:[]).concat(pool).slice(0, extras);
     s.hasFlood = picked.indexOf('flood')>=0;
     s.hasAmb   = picked.indexOf('ambulance')>=0;
-    s.hasRush  = picked.indexOf('rush')>=0;
 
     // Only stack them onto the sailing once the player has met them separately.
     const crunch = endless || want>=3;
@@ -3176,8 +3245,7 @@
     // five instruction lines fold away behind a button.
     const briefKey = endless ? 'endless' : ('s'+shiftIx);
     const seen = briefed.indexOf(briefKey)>=0;
-    if(howBox)    howBox.classList.toggle('hide', seen);
-    if(howToggle) howToggle.classList.toggle('hide', !seen);
+    if(howBox) howBox.classList.toggle('hide', seen);
     if(!seen){ briefed.push(briefKey); try{ localStorage.setItem(BRIEF_KEY,JSON.stringify(briefed)) }catch(e){} }
     readyAt=performance.now();
     if(readyOverlay) readyOverlay.classList.remove('hide');
@@ -3312,6 +3380,13 @@
     // The link used to be appended here. Removed: the copy is the scoreline, not
     // an advert, and anyone being sent it already has the game.
     lastResult = lastResult.replace(/\n+$/,'');
+    // Lifetime tallies. Counted whatever the outcome — the record is about
+    // volume of service, not only wins — except the clean-shift badge, which
+    // has to be earned whole.
+    stats.moved+=moved; stats.boat+=boatMade; stats.peds+=pedCrossed;
+    if(!endless && outcome==='time'){ stats.shifts++; if(collisions===0) stats.clean++; }
+    if(dayStarsOut>=0) stats.days++;
+    saveStats(); renderRecord();
     const rank=recordScore(final, endless?('Endless · wave '+(wave+1)):shift.name, stars);
     const bl=document.getElementById('bestLine');
     if(bl){
@@ -3432,19 +3507,11 @@
   }
   const readyOverlay=document.getElementById('readyOverlay');
   const readyShift=document.getElementById('readyShift');
-  const howBox=document.getElementById('readyHow'), howToggle=document.getElementById('howToggle');
+  const howBox=document.getElementById('readyHow');
   const BRIEF_KEY='fiveCorners.briefed.v1';
   let briefed=[];
   try{ const raw=localStorage.getItem(BRIEF_KEY); if(raw) briefed=JSON.parse(raw)||[] }catch(e){}
   if(!Array.isArray(briefed)) briefed=[];
-  if(howToggle){
-    const flip=function(e){
-      if(e){ e.preventDefault(); e.stopPropagation(); }
-      if(howBox) howBox.classList.toggle('hide');
-    };
-    howToggle.addEventListener('click',flip);
-    howToggle.addEventListener('touchend',flip,{passive:false});
-  }
   const readyRule=document.getElementById('readyRule');
   const goBtn=document.getElementById('goBtn');
   const againBtn=document.getElementById('again');
@@ -3481,7 +3548,7 @@
     if(best.endless)  bits.push('Endless best '+best.endless.toLocaleString()+(best.wave?' \u00b7 wave '+best.wave:''));
     bestLine.textContent=bits.join('   \u00b7   ');
   }
-  showBest();
+  showBest(); renderRecord();
   // Diagnostics: tap the title plaque to toggle. Reports what the device is
   // actually doing, rather than what the code assumes it is doing.
   const diagEl=document.getElementById('diag');
@@ -3525,10 +3592,21 @@
   endlessBtn.addEventListener('click',startEndless);
   // touchend is retained explicitly for older iOS/WebView contexts where a click
   // may be delayed or suppressed. launch() is guarded, so duplicate delivery is safe.
-  if(trainBtn){
-    trainBtn.addEventListener('click',startTraining);
-    trainBtn.addEventListener('touchend',startTraining,{passive:false});
+  ['trainBtn','trainLink'].forEach(function(id){
+    const b=document.getElementById(id);
+    if(!b) return;
+    b.addEventListener('click',startTraining);
+    b.addEventListener('touchend',startTraining,{passive:false});
+  });
+  // TRAINING deserves prominence exactly once: before the player has completed
+  // a shift. After that it folds into the link row.
+  function placeTraining(){
+    const done=stats.shifts>0;
+    if(trainBtn) trainBtn.classList.toggle('hide', done);
+    const tl=document.getElementById('trainLink');
+    if(tl) tl.classList.toggle('hide', !done);
   }
+  placeTraining();
   startBtn.addEventListener('touchend',startCampaign,{passive:false});
   endlessBtn.addEventListener('touchend',startEndless,{passive:false});
   // Last resort: if neither click nor touchend is delivered to the button (an
@@ -3560,7 +3638,7 @@
   // Anywhere on the dimmed panel works too — one less thing to aim at.
   if(readyOverlay) readyOverlay.addEventListener('pointerup',go);
   // Build stamp lives in the diagnostics panel only (tap the title plaque).
-  againBtn.onclick=function(){launched=false;showBest();launch()};
+  againBtn.onclick=function(){launched=false;showBest();placeTraining();launch()};
   if(skipBtn) skipBtn.onclick=function(){
     if(shiftIx<SHIFTS.length-1) shiftIx++;
     launched=false; showBest(); launch();

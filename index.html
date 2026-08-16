@@ -238,6 +238,7 @@
      so the two are always the same size regardless of label length — text
      that doesn't fit wraps inside this width rather than growing the button. */
   #again,#finaleBtn2{width:min(78vw,300px);min-width:0}
+  #finaleBtn2{margin-top:14px}
   #finaleBtn:active,#finaleBtn2:active{transform:translateY(3px);box-shadow:0 1px 0 #a86f1c,0 3px 8px #0007}
   #finaleBtn.hide,#finaleBtn2.hide{display:none!important}
   /* Glow only — no transform:scale. Scaling doesn't reserve extra layout
@@ -823,7 +824,7 @@
   try{ const raw=localStorage.getItem(BEST_KEY); if(raw) best=Object.assign(best,JSON.parse(raw)) }catch(e){}
   function saveBest(){ try{ localStorage.setItem(BEST_KEY,JSON.stringify(best)) }catch(e){} }
 
-  const BUILD='s28b · 2026-08-15';
+  const BUILD='s28d · 2026-08-15';
   // Every roll in the game goes through rnd(). Left alone it is Math.random();
   // seeded, it makes a run reproducible — which is what lets everybody play the
   // same traffic on the same day and compare honestly.
@@ -3443,7 +3444,15 @@
     if(outcome==='time'){
       score+=500;
       if(shiftIx<DAY_SHIFTS-1){ shiftIx++; againBtn.textContent='NEXT: '+SHIFTS[shiftIx].name; carryNext=true }
-      else { const wasFinale=completedShift===DAY_SHIFTS; shiftIx=0; carryNext=false; carry=0; againBtn.textContent = wasFinale ? 'PLAY AGAIN' : 'NEW DAY · '+SHIFTS[0].name; }
+      else {
+        const wasFinale=completedShift===DAY_SHIFTS;
+        // A successful finale used to reset shiftIx to 0 here regardless, so
+        // the button read "PLAY AGAIN" but silently launched Morning Boat — a
+        // new day — instead of a rematch. PLAY AGAIN now means what it says.
+        shiftIx = wasFinale ? DAY_SHIFTS : 0;
+        carryNext=false; carry=0;
+        againBtn.textContent = wasFinale ? 'PLAY AGAIN' : 'NEW DAY · '+SHIFTS[0].name;
+      }
     }else againBtn.textContent='TRY AGAIN · '+shift.name;
 
     // Goals are settled BEFORE anything is totalled, so the bonus reaches the
